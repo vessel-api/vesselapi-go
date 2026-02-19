@@ -1,0 +1,25 @@
+# Binary artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+vendor/
+
+# OpenAPI spec (fetched from live API via `make generate`)
+openapi/
+
+# Environment
+.env
+.env.*
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
