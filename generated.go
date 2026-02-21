@@ -1959,6 +1959,21 @@ type GetPorteventsParams struct {
 	// TimeTo End timestamp in RFC3339 format (defaults to current time)
 	TimeTo *string `form:"time.to,omitempty" json:"time.to,omitempty"`
 
+	// FilterCountry Country name to filter port events by
+	FilterCountry *string `form:"filter.country,omitempty" json:"filter.country,omitempty"`
+
+	// FilterUnlocode UN/LOCODE to filter port events by
+	FilterUnlocode *string `form:"filter.unlocode,omitempty" json:"filter.unlocode,omitempty"`
+
+	// FilterEventType Event type to filter by (e.g. "arrival", "departure")
+	FilterEventType *string `form:"filter.eventType,omitempty" json:"filter.eventType,omitempty"`
+
+	// FilterVesselName Vessel name to filter port events by
+	FilterVesselName *string `form:"filter.vesselName,omitempty" json:"filter.vesselName,omitempty"`
+
+	// FilterPortName Port name to filter port events by
+	FilterPortName *string `form:"filter.portName,omitempty" json:"filter.portName,omitempty"`
+
 	// PaginationLimit Maximum number of items to return, must be between 1 and 50
 	PaginationLimit *int `form:"pagination.limit,omitempty" json:"pagination.limit,omitempty"`
 
@@ -2080,7 +2095,25 @@ type GetSearchModusParams struct {
 // GetSearchPortsParams defines parameters for GetSearchPorts.
 type GetSearchPortsParams struct {
 	// FilterName Name of the port
-	FilterName string `form:"filter.name" json:"filter.name"`
+	FilterName *string `form:"filter.name,omitempty" json:"filter.name,omitempty"`
+
+	// FilterCountry Country code to filter ports by (e.g. "NL")
+	FilterCountry *string `form:"filter.country,omitempty" json:"filter.country,omitempty"`
+
+	// FilterType Port type to filter by (e.g. "Seaport")
+	FilterType *string `form:"filter.type,omitempty" json:"filter.type,omitempty"`
+
+	// FilterSize Port size to filter by
+	FilterSize *string `form:"filter.size,omitempty" json:"filter.size,omitempty"`
+
+	// FilterRegion Region to filter ports by
+	FilterRegion *string `form:"filter.region,omitempty" json:"filter.region,omitempty"`
+
+	// FilterHarborSize Harbor size to filter by
+	FilterHarborSize *string `form:"filter.harborSize,omitempty" json:"filter.harborSize,omitempty"`
+
+	// FilterHarborUse Harbor use to filter by
+	FilterHarborUse *string `form:"filter.harborUse,omitempty" json:"filter.harborUse,omitempty"`
 
 	// PaginationLimit Maximum number of items to return, must be between 1 and 50
 	PaginationLimit *int `form:"pagination.limit,omitempty" json:"pagination.limit,omitempty"`
@@ -2108,6 +2141,30 @@ type GetSearchVesselsParams struct {
 
 	// FilterCallsign Radio callsign of the vessel
 	FilterCallsign *string `form:"filter.callsign,omitempty" json:"filter.callsign,omitempty"`
+
+	// FilterFlag Flag state of the vessel (e.g. "PA" for Panama)
+	FilterFlag *string `form:"filter.flag,omitempty" json:"filter.flag,omitempty"`
+
+	// FilterVesselType Type of vessel (e.g. "Container Ship")
+	FilterVesselType *string `form:"filter.vesselType,omitempty" json:"filter.vesselType,omitempty"`
+
+	// FilterMmsi MMSI number of the vessel
+	FilterMmsi *int `form:"filter.mmsi,omitempty" json:"filter.mmsi,omitempty"`
+
+	// FilterImo IMO number of the vessel
+	FilterImo *int `form:"filter.imo,omitempty" json:"filter.imo,omitempty"`
+
+	// FilterYearBuiltMin Minimum year built filter
+	FilterYearBuiltMin *int `form:"filter.yearBuiltMin,omitempty" json:"filter.yearBuiltMin,omitempty"`
+
+	// FilterYearBuiltMax Maximum year built filter
+	FilterYearBuiltMax *int `form:"filter.yearBuiltMax,omitempty" json:"filter.yearBuiltMax,omitempty"`
+
+	// FilterClassSociety Classification society of the vessel
+	FilterClassSociety *string `form:"filter.classSociety,omitempty" json:"filter.classSociety,omitempty"`
+
+	// FilterOwner Owner of the vessel
+	FilterOwner *string `form:"filter.owner,omitempty" json:"filter.owner,omitempty"`
 
 	// PaginationLimit Maximum number of items to return, must be between 1 and 50
 	PaginationLimit *int `form:"pagination.limit,omitempty" json:"pagination.limit,omitempty"`
@@ -4620,6 +4677,86 @@ func NewGetPorteventsRequest(server string, params *GetPorteventsParams) (*http.
 
 		}
 
+		if params.FilterCountry != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.country", runtime.ParamLocationQuery, *params.FilterCountry); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterUnlocode != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.unlocode", runtime.ParamLocationQuery, *params.FilterUnlocode); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterEventType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.eventType", runtime.ParamLocationQuery, *params.FilterEventType); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterVesselName != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.vesselName", runtime.ParamLocationQuery, *params.FilterVesselName); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterPortName != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.portName", runtime.ParamLocationQuery, *params.FilterPortName); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		if params.PaginationLimit != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pagination.limit", runtime.ParamLocationQuery, *params.PaginationLimit); err != nil {
@@ -5342,16 +5479,116 @@ func NewGetSearchPortsRequest(server string, params *GetSearchPortsParams) (*htt
 	if params != nil {
 		queryValues := queryURL.Query()
 
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.name", runtime.ParamLocationQuery, params.FilterName); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+		if params.FilterName != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.name", runtime.ParamLocationQuery, *params.FilterName); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
+
+		}
+
+		if params.FilterCountry != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.country", runtime.ParamLocationQuery, *params.FilterCountry); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.type", runtime.ParamLocationQuery, *params.FilterType); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.size", runtime.ParamLocationQuery, *params.FilterSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterRegion != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.region", runtime.ParamLocationQuery, *params.FilterRegion); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterHarborSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.harborSize", runtime.ParamLocationQuery, *params.FilterHarborSize); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterHarborUse != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.harborUse", runtime.ParamLocationQuery, *params.FilterHarborUse); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
 		}
 
 		if params.PaginationLimit != nil {
@@ -5515,6 +5752,134 @@ func NewGetSearchVesselsRequest(server string, params *GetSearchVesselsParams) (
 		if params.FilterCallsign != nil {
 
 			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.callsign", runtime.ParamLocationQuery, *params.FilterCallsign); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterFlag != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.flag", runtime.ParamLocationQuery, *params.FilterFlag); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterVesselType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.vesselType", runtime.ParamLocationQuery, *params.FilterVesselType); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterMmsi != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.mmsi", runtime.ParamLocationQuery, *params.FilterMmsi); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterImo != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.imo", runtime.ParamLocationQuery, *params.FilterImo); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterYearBuiltMin != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.yearBuiltMin", runtime.ParamLocationQuery, *params.FilterYearBuiltMin); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterYearBuiltMax != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.yearBuiltMax", runtime.ParamLocationQuery, *params.FilterYearBuiltMax); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterClassSociety != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.classSociety", runtime.ParamLocationQuery, *params.FilterClassSociety); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.FilterOwner != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "filter.owner", runtime.ParamLocationQuery, *params.FilterOwner); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err

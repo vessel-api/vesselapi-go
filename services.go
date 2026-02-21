@@ -261,7 +261,7 @@ type PortEventsService struct {
 	client *Client
 }
 
-// List retrieves port events with optional filtering.
+// List retrieves port events with optional time range and filtering by country, port, vessel, or event type.
 func (s *PortEventsService) List(ctx context.Context, params *GetPorteventsParams) (*PortEventsResponse, error) {
 	if params == nil {
 		params = &GetPorteventsParams{}
@@ -425,7 +425,7 @@ type SearchService struct {
 	client *Client
 }
 
-// Vessels searches for vessels by name or callsign.
+// Vessels searches for vessels by name, callsign, flag, type, and other filters.
 func (s *SearchService) Vessels(ctx context.Context, params *GetSearchVesselsParams) (*FindVesselsResponse, error) {
 	if params == nil {
 		params = &GetSearchVesselsParams{}
@@ -447,7 +447,7 @@ func (s *SearchService) Vessels(ctx context.Context, params *GetSearchVesselsPar
 	return parsed.JSON200, nil
 }
 
-// Ports searches for ports by name.
+// Ports searches for ports by name, country, type, region, and other filters.
 func (s *SearchService) Ports(ctx context.Context, params *GetSearchPortsParams) (*FindPortsResponse, error) {
 	if params == nil {
 		params = &GetSearchPortsParams{}

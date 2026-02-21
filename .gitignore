@@ -6,6 +6,7 @@
 *.dylib
 *.test
 *.out
+examples/basic/basic
 
 # Go workspace
 vendor/

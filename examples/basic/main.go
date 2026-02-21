@@ -45,6 +45,40 @@ func main() {
 		)
 	}
 
+	// Search for vessels by flag (e.g. Panama-flagged container ships).
+	fmt.Println("\n--- Search Vessels by Flag ---")
+	flagResult, err := client.Search.Vessels(ctx, &vesselapi.GetSearchVesselsParams{
+		FilterFlag:       vesselapi.Ptr("PA"),
+		FilterVesselType: vesselapi.Ptr("Container Ship"),
+		PaginationLimit:  vesselapi.Ptr(5),
+	})
+	if err != nil {
+		log.Fatalf("search vessels by flag: %v", err)
+	}
+	for _, v := range vesselapi.Deref(flagResult.Vessels) {
+		fmt.Printf("Vessel: %s (IMO: %d, Country: %s)\n",
+			vesselapi.Deref(v.Name),
+			vesselapi.Deref(v.Imo),
+			vesselapi.Deref(v.Country),
+		)
+	}
+
+	// Search for ports by country.
+	fmt.Println("\n--- Search Ports by Country ---")
+	portSearch, err := client.Search.Ports(ctx, &vesselapi.GetSearchPortsParams{
+		FilterCountry:   vesselapi.Ptr("NL"),
+		PaginationLimit: vesselapi.Ptr(5),
+	})
+	if err != nil {
+		log.Fatalf("search ports by country: %v", err)
+	}
+	for _, p := range vesselapi.Deref(portSearch.Ports) {
+		fmt.Printf("Port: %s (%s)\n",
+			vesselapi.Deref(p.Name),
+			vesselapi.Deref(p.UnloCode),
+		)
+	}
+
 	// Get a port by UNLOCODE.
 	fmt.Println("\n--- Get Port ---")
 	port, err := client.Ports.Get(ctx, "NLRTM")
