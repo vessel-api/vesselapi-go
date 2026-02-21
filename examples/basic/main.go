@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	vesselapi "github.com/vessel-api/vesselapi-go"
+	vesselapi "github.com/vessel-api/vesselapi-go/v3"
 )
 
 func main() {

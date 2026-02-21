@@ -531,7 +531,7 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Ports(ctx, &GetSearchPortsParams{
-			FilterType:      Ptr("Seaport"),
+			FilterType:      Ptr("Port"),
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -541,7 +541,7 @@ func TestSmoke_Search(t *testing.T) {
 			t.Fatal("expected non-nil response")
 		}
 		if len(Deref(resp.Ports)) == 0 {
-			t.Log("warning: filter.type returned no results — filter may not be deployed yet")
+			t.Error("expected at least one port with type Port")
 		}
 	})
 
@@ -991,14 +991,22 @@ func TestSmoke_Vessels_BadParams(t *testing.T) {
 		requireAPIError(t, err, 404)
 	})
 
-	// Vessel exists but has zero casualty records → 404
+	// Vessel exists but has zero casualty records → 200 with empty list
 	t.Run("Casualties_ExistsButEmpty", func(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
-		_, err := client.Vessels.Casualties(ctx, "9778791", &GetVesselIdCasualtiesParams{
+		resp, err := client.Vessels.Casualties(ctx, "9778791", &GetVesselIdCasualtiesParams{
 			FilterIdType: GetVesselIdCasualtiesParamsFilterIdTypeImo,
 		})
-		requireAPIError(t, err, 404)
+		if err != nil {
+			t.Fatalf("Casualties_ExistsButEmpty: expected no error, got %v", err)
+		}
+		if resp == nil {
+			t.Fatal("Casualties_ExistsButEmpty: expected non-nil response")
+		}
+		if items := derefSlice(resp.Casualties); len(items) != 0 {
+			t.Fatalf("Casualties_ExistsButEmpty: expected empty list, got %d items", len(items))
+		}
 	})
 
 	t.Run("Emissions_NotFound", func(t *testing.T) {
@@ -1010,14 +1018,22 @@ func TestSmoke_Vessels_BadParams(t *testing.T) {
 		requireAPIError(t, err, 404)
 	})
 
-	// Vessel exists but has zero emission records → 404
+	// Vessel exists but has zero emission records → 200 with empty list
 	t.Run("Emissions_ExistsButEmpty", func(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
-		_, err := client.Vessels.Emissions(ctx, "9363728", &GetVesselIdEmissionsParams{
+		resp, err := client.Vessels.Emissions(ctx, "9363728", &GetVesselIdEmissionsParams{
 			FilterIdType: GetVesselIdEmissionsParamsFilterIdTypeImo,
 		})
-		requireAPIError(t, err, 404)
+		if err != nil {
+			t.Fatalf("Emissions_ExistsButEmpty: expected no error, got %v", err)
+		}
+		if resp == nil {
+			t.Fatal("Emissions_ExistsButEmpty: expected non-nil response")
+		}
+		if items := derefSlice(resp.Emissions); len(items) != 0 {
+			t.Fatalf("Emissions_ExistsButEmpty: expected empty list, got %d items", len(items))
+		}
 	})
 }
 
@@ -1099,15 +1115,23 @@ func TestSmoke_PortEvents_BadParams(t *testing.T) {
 		requireAPIError(t, err, 404)
 	})
 
-	// Vessel exists but has zero port event records → 404 (after both primary and fallback lookups)
+	// Vessel exists but has zero port event records → 200 with empty list (MADRID MAERSK)
 	t.Run("ByVessel_ExistsButEmpty", func(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
-		_, err := client.PortEvents.ByVessel(ctx, "231591000", &GetPorteventsVesselIdParams{
+		resp, err := client.PortEvents.ByVessel(ctx, "219836000", &GetPorteventsVesselIdParams{
 			FilterIdType:    GetPorteventsVesselIdParamsFilterIdTypeMmsi,
 			PaginationLimit: Ptr(5),
 		})
-		requireAPIError(t, err, 404)
+		if err != nil {
+			t.Fatalf("ByVessel_ExistsButEmpty: expected no error, got %v", err)
+		}
+		if resp == nil {
+			t.Fatal("ByVessel_ExistsButEmpty: expected non-nil response")
+		}
+		if items := derefSlice(resp.PortEvents); len(items) != 0 {
+			t.Fatalf("ByVessel_ExistsButEmpty: expected empty list, got %d items", len(items))
+		}
 	})
 
 	t.Run("LastByVessel_NotFound", func(t *testing.T) {

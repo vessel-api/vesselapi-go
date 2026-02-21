@@ -1,4 +1,4 @@
-module github.com/vessel-api/vesselapi-go
+module github.com/vessel-api/vesselapi-go/v3
 
 go 1.22
 

@@ -1,8 +1,8 @@
 # vesselapi-go
 
 [![CI](https://github.com/vessel-api/vesselapi-go/actions/workflows/ci.yml/badge.svg)](https://github.com/vessel-api/vesselapi-go/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/vessel-api/vesselapi-go.svg)](https://pkg.go.dev/github.com/vessel-api/vesselapi-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/vessel-api/vesselapi-go)](https://goreportcard.com/report/github.com/vessel-api/vesselapi-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/vessel-api/vesselapi-go/v3.svg)](https://pkg.go.dev/github.com/vessel-api/vesselapi-go/v3)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vessel-api/vesselapi-go/v3)](https://goreportcard.com/report/github.com/vessel-api/vesselapi-go/v3)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Go client for the [Vessel Tracking API](https://vesselapi.com) — maritime vessel tracking, port events, emissions, and navigation data.
@@ -12,7 +12,7 @@ Go client for the [Vessel Tracking API](https://vesselapi.com) — maritime vess
 ## Install
 
 ```bash
-go get github.com/vessel-api/vesselapi-go
+go get github.com/vessel-api/vesselapi-go/v3
 ```
 
 Requires Go 1.22+.
@@ -28,7 +28,7 @@ import (
 	"log"
 	"os"
 
-	vesselapi "github.com/vessel-api/vesselapi-go"
+	vesselapi "github.com/vessel-api/vesselapi-go/v3"
 )
 
 func main() {
@@ -142,7 +142,7 @@ Retries use exponential backoff with jitter on 429 and 5xx responses. The `Retry
 - [API Documentation](https://vesselapi.com/docs) — endpoint guides, request/response schemas, and usage examples
 - [API Explorer](https://vesselapi.com/api-reference) — interactive API reference to try endpoints in the browser
 - [Dashboard](https://dashboard.vesselapi.com) — manage API keys and monitor usage
-- [pkg.go.dev](https://pkg.go.dev/github.com/vessel-api/vesselapi-go) — Go package reference
+- [pkg.go.dev](https://pkg.go.dev/github.com/vessel-api/vesselapi-go/v3) — Go package reference
 
 ## Contributing & Support
 
