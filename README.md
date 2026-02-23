@@ -84,6 +84,44 @@ func main() {
 
 **37 methods total.**
 
+## Vessel Lookup & Location
+
+```go
+// Get vessel details by IMO number (nil defaults to IMO; pass FilterIdType for MMSI).
+vessel, err := client.Vessels.Get(ctx, "9811000", nil)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("%s (%s)\n", vesselapi.Deref(vessel.Vessel.Name), vesselapi.Deref(vessel.Vessel.VesselType))
+
+// Get the vessel's latest AIS position.
+pos, err := client.Vessels.Position(ctx, "9811000", nil)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Position: %f, %f\n",
+	vesselapi.Deref(pos.VesselPosition.Latitude),
+	vesselapi.Deref(pos.VesselPosition.Longitude),
+)
+
+// Find all vessels within 10 km of Rotterdam.
+nearby, err := client.Location.VesselsRadius(ctx, &vesselapi.GetLocationVesselsRadiusParams{
+	FilterLatitude:  vesselapi.Ptr(51.9225),
+	FilterLongitude: vesselapi.Ptr(4.47917),
+	FilterRadius:    10000,
+})
+if err != nil {
+	log.Fatal(err)
+}
+for _, v := range vesselapi.Deref(nearby.Vessels) {
+	fmt.Printf("%s at %f, %f\n",
+		vesselapi.Deref(v.VesselName),
+		vesselapi.Deref(v.Latitude),
+		vesselapi.Deref(v.Longitude),
+	)
+}
+```
+
 ## Error Handling
 
 All methods return `*APIError` on non-2xx responses. Use `errors.As` to inspect:
@@ -110,7 +148,7 @@ Every list endpoint has an `All*` variant returning an `Iterator`:
 
 ```go
 it := client.Search.AllVessels(ctx, &vesselapi.GetSearchVesselsParams{
-	FilterName: vesselapi.Ptr("tanker"),
+	FilterVesselType: vesselapi.Ptr("Tanker"),
 })
 for it.Next() {
 	vessel := it.Value()
@@ -120,8 +158,11 @@ if err := it.Err(); err != nil {
 	log.Fatal(err)
 }
 
-// Or collect all at once:
-vessels, err := client.Search.AllVessels(ctx, params).Collect()
+// Or collect a bounded set at once:
+vessels, err := client.Search.AllVessels(ctx, &vesselapi.GetSearchVesselsParams{
+	FilterVesselType: vesselapi.Ptr("Tanker"),
+	PaginationLimit:  vesselapi.Ptr(50),
+}).Collect()
 ```
 
 ## Configuration

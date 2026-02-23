@@ -92,6 +92,55 @@ func main() {
 		)
 	}
 
+	// Get vessel details by IMO number (nil defaults to IMO; pass FilterIdType for MMSI).
+	fmt.Println("\n--- Vessel by IMO ---")
+	vessel, err := client.Vessels.Get(ctx, "9811000", nil)
+	if err != nil {
+		log.Fatalf("get vessel: %v", err)
+	}
+	if vessel.Vessel != nil {
+		fmt.Printf("Vessel: %s (Type: %s)\n",
+			vesselapi.Deref(vessel.Vessel.Name),
+			vesselapi.Deref(vessel.Vessel.VesselType),
+		)
+	}
+
+	// Get the vessel's latest AIS position.
+	fmt.Println("\n--- Vessel Position ---")
+	pos, err := client.Vessels.Position(ctx, "9811000", nil)
+	if err != nil {
+		log.Fatalf("get vessel position: %v", err)
+	}
+	if pos.VesselPosition != nil {
+		fmt.Printf("Position: %f, %f\n",
+			vesselapi.Deref(pos.VesselPosition.Latitude),
+			vesselapi.Deref(pos.VesselPosition.Longitude),
+		)
+		fmt.Printf("Speed: %.1f knots, Heading: %d\n",
+			vesselapi.Deref(pos.VesselPosition.Sog),
+			vesselapi.Deref(pos.VesselPosition.Heading),
+		)
+	}
+
+	// Find vessels within 10 km of Rotterdam.
+	fmt.Println("\n--- Vessels Near Rotterdam ---")
+	nearby, err := client.Location.VesselsRadius(ctx, &vesselapi.GetLocationVesselsRadiusParams{
+		FilterLatitude:  vesselapi.Ptr(51.9225),
+		FilterLongitude: vesselapi.Ptr(4.47917),
+		FilterRadius:    10000,
+	})
+	if err != nil {
+		log.Fatalf("vessels radius: %v", err)
+	}
+	for _, v := range vesselapi.Deref(nearby.Vessels) {
+		fmt.Printf("%s (IMO: %d) at %f, %f\n",
+			vesselapi.Deref(v.VesselName),
+			vesselapi.Deref(v.Imo),
+			vesselapi.Deref(v.Latitude),
+			vesselapi.Deref(v.Longitude),
+		)
+	}
+
 	// Handle a not-found port gracefully.
 	fmt.Println("\n--- Not Found Handling ---")
 	_, err = client.Ports.Get(ctx, "ZZZZZ")
