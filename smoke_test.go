@@ -242,6 +242,72 @@ func TestSmoke_Ports(t *testing.T) {
 			t.Errorf("unexpected UNLOCODE: got %q", Deref(resp.Port.UnloCode))
 		}
 	})
+
+	t.Run("Inbound", func(t *testing.T) {
+		t.Parallel()
+		ctx := smokeCtx(t)
+		now := time.Now().UTC()
+		etaFrom := now.Format(time.RFC3339)
+		etaTo := now.Add(48 * time.Hour).Format(time.RFC3339)
+		resp, err := client.Ports.Inbound(ctx, "NLRTM", &PortInboundParams{
+			EtaFrom:         etaFrom,
+			EtaTo:           etaTo,
+			PaginationLimit: Ptr(5),
+		})
+		if err != nil {
+			t.Fatalf("Ports.Inbound: %v", err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil inbound response")
+		}
+		// VesselETAs may be nil if no vessels heading to port right now, that's OK
+		t.Logf("got %d inbound vessels", len(derefSlice(resp.VesselETAs)))
+	})
+}
+
+// ---------------------------------------------------------------------------
+// VesselETA destination_port and _meta fallback
+// ---------------------------------------------------------------------------
+
+func TestSmoke_VesselETA_DestinationPort(t *testing.T) {
+	client := getSmokeClient(t)
+	ctx := smokeCtx(t)
+	resp, err := client.Vessels.ETA(ctx, "9925837", nil)
+	if err != nil {
+		t.Skipf("Vessels.ETA: %v", err)
+	}
+	if resp == nil || resp.VesselEta == nil {
+		t.Skip("no ETA data for test vessel")
+	}
+	dp := Deref(resp.VesselEta.DestinationPort)
+	if dp == "" {
+		t.Fatal("expected destination_port to be non-empty")
+	}
+	t.Logf("destination_port=%q", dp)
+}
+
+func TestSmoke_Meta_Fallback(t *testing.T) {
+	client := getSmokeClient(t)
+	ctx := smokeCtx(t)
+	// Use an MMSI value (477045900) but claim idType=imo to trigger fallback
+	mmsiAsImo := "477045900"
+	resp, err := client.Vessels.Get(ctx, mmsiAsImo, &GetVesselIdParams{
+		FilterIdType: GetVesselIdParamsFilterIdTypeImo,
+	})
+	if err != nil {
+		t.Skipf("fallback lookup failed (vessel may not exist): %v", err)
+	}
+	if resp == nil || resp.Vessel == nil {
+		t.Skip("no vessel returned")
+	}
+	if resp.Meta == nil {
+		t.Skip("no _meta in response — API may not have triggered fallback")
+	}
+	if Deref(resp.Meta.ResolvedIdType) != "mmsi" {
+		t.Errorf("expected resolvedIdType=mmsi, got %q", Deref(resp.Meta.ResolvedIdType))
+	}
+	t.Logf("_meta fallback: requested=%s resolved=%s id=%d",
+		Deref(resp.Meta.RequestedIdType), Deref(resp.Meta.ResolvedIdType), Deref(resp.Meta.ResolvedId))
 }
 
 // ---------------------------------------------------------------------------

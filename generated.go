@@ -172,10 +172,24 @@ type BadRequestErrorResponse struct {
 	Error *BadRequestErrorDetail `json:"error,omitempty"`
 }
 
+// ResolutionMeta provides metadata about ID resolution fallback.
+// Present in responses when the API resolved a vessel using a different ID type than requested.
+type ResolutionMeta struct {
+	// RequestedIdType is the ID type the client specified (e.g. "imo" or "mmsi")
+	RequestedIdType *string `json:"requestedIdType,omitempty"`
+	// ResolvedIdType is the ID type that actually matched
+	ResolvedIdType *string `json:"resolvedIdType,omitempty"`
+	// ResolvedId is the ID value that matched
+	ResolvedId *int `json:"resolvedId,omitempty"`
+}
+
 // ClassificationResponse Response containing vessel classification data
 type ClassificationResponse struct {
 	// Classification Vessel classification data including identification, certificates, surveys, and technical specifications
 	Classification *ClassificationVessel `json:"classification,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // ClassificationVessel Vessel classification data including identification, certificates, surveys, and technical specifications
@@ -509,6 +523,9 @@ type MarineCasualtiesResponse struct {
 
 	// NextToken Opaque token for fetching the next page, or null if no more results
 	NextToken *string `json:"nextToken,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // MarineCasualty Marine casualty occurrence record from the European Marine Casualty Information Platform
@@ -782,6 +799,9 @@ type PortEvent struct {
 type PortEventResponse struct {
 	// PortEvent Vessel port call event including arrivals and departures
 	PortEvent *PortEvent `json:"portEvent,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // PortEventsResponse Response containing port event data
@@ -791,6 +811,18 @@ type PortEventsResponse struct {
 
 	// PortEvents List of port events
 	PortEvents *[]PortEvent `json:"portEvents,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
+}
+
+// PortInboundResponse Response containing vessels heading to a port
+type PortInboundResponse struct {
+	// VesselETAs List of vessel ETAs heading to the port
+	VesselETAs *[]VesselETA `json:"vesselETAs,omitempty"`
+
+	// NextToken Opaque token for fetching the next page, or null if no more results
+	NextToken *string `json:"nextToken,omitempty"`
 }
 
 // PortResponse Response containing a single port
@@ -984,6 +1016,9 @@ type VesselETA struct {
 	// Destination Reported destination port or area as entered by the vessel
 	Destination *string `json:"destination,omitempty"`
 
+	// DestinationPort Resolved UN/LOCODE of the destination port (empty if unresolved)
+	DestinationPort *string `json:"destination_port,omitempty"`
+
 	// Draught Current draught (draft) of the vessel in meters
 	Draught *float32 `json:"draught,omitempty"`
 
@@ -1007,6 +1042,9 @@ type VesselETA struct {
 type VesselETAResponse struct {
 	// VesselEta Vessel Estimated Time of Arrival information from AIS static/voyage data
 	VesselEta *VesselETA `json:"vesselEta,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // VesselEmission EU MRV vessel emissions report including CO2 emissions, fuel consumption, and efficiency metrics
@@ -1142,6 +1180,9 @@ type VesselEmissionsResponse struct {
 
 	// NextToken Opaque token for fetching the next page, or null if no more results
 	NextToken *string `json:"nextToken,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // VesselPosition Real-time vessel position data derived from AIS messages
@@ -1190,6 +1231,9 @@ type VesselPosition struct {
 type VesselPositionResponse struct {
 	// VesselPosition Real-time vessel position data derived from AIS messages
 	VesselPosition *VesselPosition `json:"vesselPosition,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // VesselPositionsResponse Response containing vessel position data
@@ -1199,12 +1243,18 @@ type VesselPositionsResponse struct {
 
 	// VesselPositions List of vessel position records
 	VesselPositions *[]VesselPosition `json:"vesselPositions,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // VesselResponse Response containing vessel data
 type VesselResponse struct {
 	// Vessel Complete vessel static data including identification, dimensions, and ownership
 	Vessel *Vessel `json:"vessel,omitempty"`
+
+	// Meta Resolution metadata, present when ID fallback was used
+	Meta *ResolutionMeta `json:"_meta,omitempty"`
 }
 
 // VesselsWithinLocationResponse Response containing vessel within location data

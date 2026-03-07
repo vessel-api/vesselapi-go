@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 // VesselsService wraps vessel-related API endpoints.
@@ -254,6 +257,79 @@ func (s *PortsService) Get(ctx context.Context, unlocode string) (*PortResponse,
 		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
 	}
 	return parsed.JSON200, nil
+}
+
+// PortInboundParams defines parameters for the port inbound endpoint.
+type PortInboundParams struct {
+	// EtaFrom Start of ETA arrival window in RFC3339 format (required)
+	EtaFrom string
+	// EtaTo End of ETA arrival window in RFC3339 format (required)
+	EtaTo string
+	// TimeFrom Report freshness start (optional, defaults to 24 hours ago)
+	TimeFrom *string
+	// TimeTo Report freshness end (optional, defaults to current time)
+	TimeTo *string
+	// PaginationLimit Maximum number of items to return (1-50, default 20)
+	PaginationLimit *int
+	// PaginationNextToken Token for next page
+	PaginationNextToken *string
+}
+
+// Inbound retrieves vessels heading to a port within an ETA window.
+func (s *PortsService) Inbound(ctx context.Context, unlocode string, params *PortInboundParams) (*PortInboundResponse, error) {
+	if params == nil {
+		return nil, fmt.Errorf("vesselapi: params with EtaFrom and EtaTo are required")
+	}
+	serverURL, err := url.Parse(s.client.Server)
+	if err != nil {
+		return nil, fmt.Errorf("vesselapi: %w", err)
+	}
+	operationPath := fmt.Sprintf("./port/%s/inbound", url.PathEscape(unlocode))
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, fmt.Errorf("vesselapi: %w", err)
+	}
+	q := queryURL.Query()
+	q.Set("filter.etaFrom", params.EtaFrom)
+	q.Set("filter.etaTo", params.EtaTo)
+	if params.TimeFrom != nil {
+		q.Set("time.from", *params.TimeFrom)
+	}
+	if params.TimeTo != nil {
+		q.Set("time.to", *params.TimeTo)
+	}
+	if params.PaginationLimit != nil {
+		q.Set("pagination.limit", fmt.Sprintf("%d", *params.PaginationLimit))
+	}
+	if params.PaginationNextToken != nil {
+		q.Set("pagination.nextToken", *params.PaginationNextToken)
+	}
+	queryURL.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("vesselapi: %w", err)
+	}
+	rsp, err := s.client.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("vesselapi: %w", err)
+	}
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	_ = rsp.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("vesselapi: %w", err)
+	}
+	if err := errFromStatus(rsp.StatusCode, bodyBytes); err != nil {
+		return nil, err
+	}
+	if !strings.Contains(rsp.Header.Get("Content-Type"), "json") || len(bodyBytes) == 0 {
+		return nil, &APIError{StatusCode: rsp.StatusCode, Message: "unexpected empty response", Body: bodyBytes}
+	}
+	var result PortInboundResponse
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		return nil, fmt.Errorf("vesselapi: %w", err)
+	}
+	return &result, nil
 }
 
 // PortEventsService wraps port event API endpoints.

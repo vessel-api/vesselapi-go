@@ -1,6 +1,9 @@
 package vesselapi
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // fetchFunc is a function that fetches a page of items and returns
 // the items, an optional next-page token, and any error.
@@ -101,6 +104,27 @@ func derefSlice[T any](p *[]T) []T {
 		return nil
 	}
 	return *p
+}
+
+// --- Ports ---
+
+// InboundAll returns an iterator over all inbound vessels for a port across pages.
+func (s *PortsService) InboundAll(ctx context.Context, unlocode string, params *PortInboundParams) *Iterator[VesselETA] {
+	if params == nil {
+		return newIterator(func() ([]VesselETA, *string, error) {
+			return nil, nil, fmt.Errorf("vesselapi: params with EtaFrom and EtaTo are required")
+		})
+	}
+	p := *params
+	return newIterator(func() ([]VesselETA, *string, error) {
+		resp, err := s.Inbound(ctx, unlocode, &p)
+		if err != nil {
+			return nil, nil, err
+		}
+		items := derefSlice(resp.VesselETAs)
+		p.PaginationNextToken = resp.NextToken
+		return items, resp.NextToken, nil
+	})
 }
 
 // --- Emissions ---
