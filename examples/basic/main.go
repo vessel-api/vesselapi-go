@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	vesselapi "github.com/vessel-api/vesselapi-go/v3"
+	vesselapi "github.com/vessel-api/vesselapi-go/v4"
 )
 
 func main() {
@@ -48,8 +48,8 @@ func main() {
 	// Search for vessels by flag (e.g. Panama-flagged container ships).
 	fmt.Println("\n--- Search Vessels by Flag ---")
 	flagResult, err := client.Search.Vessels(ctx, &vesselapi.GetSearchVesselsParams{
-		FilterFlag:       vesselapi.Ptr("PA"),
-		FilterVesselType: vesselapi.Ptr("Container Ship"),
+		FilterFlag:       &[]string{"PA"},
+		FilterVesselType: &[]string{"Container Ship"},
 		PaginationLimit:  vesselapi.Ptr(5),
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func main() {
 	// Search for ports by country.
 	fmt.Println("\n--- Search Ports by Country ---")
 	portSearch, err := client.Search.Ports(ctx, &vesselapi.GetSearchPortsParams{
-		FilterCountry:   vesselapi.Ptr("NL"),
+		FilterCountry:   &[]string{"NL"},
 		PaginationLimit: vesselapi.Ptr(5),
 	})
 	if err != nil {
@@ -125,8 +125,8 @@ func main() {
 	// Find vessels within 10 km of Rotterdam.
 	fmt.Println("\n--- Vessels Near Rotterdam ---")
 	nearby, err := client.Location.VesselsRadius(ctx, &vesselapi.GetLocationVesselsRadiusParams{
-		FilterLatitude:  vesselapi.Ptr(51.9225),
-		FilterLongitude: vesselapi.Ptr(4.47917),
+		FilterLatitude:  51.9225,
+		FilterLongitude: 4.47917,
 		FilterRadius:    10000,
 	})
 	if err != nil {

@@ -98,20 +98,6 @@ func TestSmoke_Vessels(t *testing.T) {
 		}
 	})
 
-	t.Run("Classification", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		resp, err := client.Vessels.Classification(ctx, "9121998", &GetVesselIdClassificationParams{
-			FilterIdType: GetVesselIdClassificationParamsFilterIdTypeImo,
-		})
-		if err != nil {
-			t.Fatalf("Vessels.Classification: %v", err)
-		}
-		if resp == nil || resp.Classification == nil {
-			t.Fatal("expected non-nil classification response")
-		}
-	})
-
 	t.Run("Emissions", func(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
@@ -137,71 +123,6 @@ func TestSmoke_Vessels(t *testing.T) {
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil ETA response")
-		}
-	})
-
-	t.Run("Inspections", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		resp, err := client.Vessels.Inspections(ctx, "9121998", &GetVesselIdInspectionsParams{
-			FilterIdType: GetVesselIdInspectionsParamsFilterIdTypeImo,
-		})
-		if err != nil {
-			t.Fatalf("Vessels.Inspections: %v", err)
-		}
-		if resp == nil {
-			t.Fatal("expected non-nil inspections response")
-		}
-		if Deref(resp.InspectionCount) == 0 {
-			t.Log("warning: no inspections returned")
-		}
-	})
-
-	t.Run("InspectionDetail", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-
-		// Dynamically discover a real detail_id from the inspections list.
-		inspResp, err := client.Vessels.Inspections(ctx, "9121998", &GetVesselIdInspectionsParams{
-			FilterIdType: GetVesselIdInspectionsParamsFilterIdTypeImo,
-		})
-		if err != nil {
-			t.Fatalf("Vessels.Inspections (for detail discovery): %v", err)
-		}
-		inspections := Deref(inspResp.Inspections)
-		if len(inspections) == 0 {
-			t.Skip("no inspections available to test detail endpoint")
-		}
-		detailID := Deref(inspections[0].DetailId)
-		if detailID == "" {
-			t.Skip("first inspection has no detail_id")
-		}
-
-		resp, err := client.Vessels.InspectionDetail(ctx, "9121998", detailID, &GetVesselIdInspectionsDetailIdParams{
-			FilterIdType: GetVesselIdInspectionsDetailIdParamsFilterIdTypeImo,
-		})
-		if err != nil {
-			t.Fatalf("Vessels.InspectionDetail: %v", err)
-		}
-		if resp == nil {
-			t.Fatal("expected non-nil inspection detail response")
-		}
-		if Deref(resp.DetailId) != detailID {
-			t.Errorf("detail_id mismatch: got %q, want %q", Deref(resp.DetailId), detailID)
-		}
-	})
-
-	t.Run("Ownership", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		resp, err := client.Vessels.Ownership(ctx, "9121998", &GetVesselIdOwnershipParams{
-			FilterIdType: GetVesselIdOwnershipParamsFilterIdTypeImo,
-		})
-		if err != nil {
-			t.Fatalf("Vessels.Ownership: %v", err)
-		}
-		if resp == nil {
-			t.Fatal("expected non-nil ownership response")
 		}
 	})
 
@@ -249,9 +170,9 @@ func TestSmoke_Ports(t *testing.T) {
 		now := time.Now().UTC()
 		etaFrom := now.Format(time.RFC3339)
 		etaTo := now.Add(48 * time.Hour).Format(time.RFC3339)
-		resp, err := client.Ports.Inbound(ctx, "NLRTM", &PortInboundParams{
-			EtaFrom:         etaFrom,
-			EtaTo:           etaTo,
+		resp, err := client.Ports.Inbound(ctx, "NLRTM", &GetPortUnlocodeInboundParams{
+			FilterEtaFrom:   &etaFrom,
+			FilterEtaTo:     &etaTo,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -355,7 +276,7 @@ func TestSmoke_PortEvents(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.PortEvents.List(ctx, &GetPorteventsParams{
-			FilterEventType: Ptr("arrival"),
+			FilterEventType: Ptr(GetPorteventsParamsFilterEventType("arrival")),
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -371,7 +292,7 @@ func TestSmoke_PortEvents(t *testing.T) {
 		ctx := smokeCtx(t)
 		resp, err := client.PortEvents.List(ctx, &GetPorteventsParams{
 			FilterCountry:   Ptr("Singapore"),
-			FilterEventType: Ptr("arrival"),
+			FilterEventType: Ptr(GetPorteventsParamsFilterEventType("arrival")),
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -510,7 +431,7 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Vessels(ctx, &GetSearchVesselsParams{
-			FilterFlag:      Ptr("PA"),
+			FilterFlag:      &[]string{"PA"},
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -528,7 +449,7 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Vessels(ctx, &GetSearchVesselsParams{
-			FilterVesselType: Ptr("Container Ship"),
+			FilterVesselType: &[]string{"Container Ship"},
 			PaginationLimit:  Ptr(5),
 		})
 		if err != nil {
@@ -546,8 +467,8 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Vessels(ctx, &GetSearchVesselsParams{
-			FilterFlag:       Ptr("PA"),
-			FilterVesselType: Ptr("Container Ship"),
+			FilterFlag:       &[]string{"PA"},
+			FilterVesselType: &[]string{"Container Ship"},
 			PaginationLimit:  Ptr(5),
 		})
 		if err != nil {
@@ -579,7 +500,7 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Ports(ctx, &GetSearchPortsParams{
-			FilterCountry:   Ptr("NL"),
+			FilterCountry:   &[]string{"NL"},
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -597,7 +518,7 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Ports(ctx, &GetSearchPortsParams{
-			FilterType:      Ptr("Port"),
+			FilterType:      &[]GetSearchPortsParamsFilterType{"Port"},
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -615,8 +536,8 @@ func TestSmoke_Search(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Search.Ports(ctx, &GetSearchPortsParams{
-			FilterCountry:    Ptr("NL"),
-			FilterHarborSize: Ptr("L"),
+			FilterCountry:    &[]string{"NL"},
+			FilterHarborSize: &[]string{"L"},
 			PaginationLimit:  Ptr(5),
 		})
 		if err != nil {
@@ -707,10 +628,10 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.VesselsBoundingBox(ctx, &GetLocationVesselsBoundingBoxParams{
-			FilterLonLeft:   Ptr(4.0),
-			FilterLonRight:  Ptr(5.0),
-			FilterLatBottom: Ptr(51.0),
-			FilterLatTop:    Ptr(52.0),
+			FilterLonLeft:   4.0,
+			FilterLonRight:  5.0,
+			FilterLatBottom: 51.0,
+			FilterLatTop:    52.0,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -725,8 +646,8 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 4.5,
+			FilterLatitude:  51.5,
 			FilterRadius:    100000,
 			PaginationLimit: Ptr(5),
 		})
@@ -742,10 +663,10 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.PortsBoundingBox(ctx, &GetLocationPortsBoundingBoxParams{
-			FilterLonLeft:   Ptr(4.0),
-			FilterLonRight:  Ptr(5.0),
-			FilterLatBottom: Ptr(51.0),
-			FilterLatTop:    Ptr(52.0),
+			FilterLonLeft:   4.0,
+			FilterLonRight:  5.0,
+			FilterLatBottom: 51.0,
+			FilterLatTop:    52.0,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -763,8 +684,8 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.PortsRadius(ctx, &GetLocationPortsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 4.5,
+			FilterLatitude:  51.5,
 			FilterRadius:    100000,
 			PaginationLimit: Ptr(5),
 		})
@@ -783,10 +704,10 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.DGPSBoundingBox(ctx, &GetLocationDgpsBoundingBoxParams{
-			FilterLonLeft:   Ptr(7.0),
-			FilterLonRight:  Ptr(9.0),
-			FilterLatBottom: Ptr(55.0),
-			FilterLatTop:    Ptr(56.0),
+			FilterLonLeft:   7.0,
+			FilterLonRight:  9.0,
+			FilterLatBottom: 55.0,
+			FilterLatTop:    56.0,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -801,8 +722,8 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.DGPSRadius(ctx, &GetLocationDgpsRadiusParams{
-			FilterLongitude: Ptr(8.084),
-			FilterLatitude:  Ptr(55.558),
+			FilterLongitude: 8.084,
+			FilterLatitude:  55.558,
 			FilterRadius:    10000,
 			PaginationLimit: Ptr(5),
 		})
@@ -818,10 +739,10 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.LightAidsBoundingBox(ctx, &GetLocationLightaidsBoundingBoxParams{
-			FilterLonLeft:   Ptr(4.0),
-			FilterLonRight:  Ptr(5.0),
-			FilterLatBottom: Ptr(51.0),
-			FilterLatTop:    Ptr(52.0),
+			FilterLonLeft:   4.0,
+			FilterLonRight:  5.0,
+			FilterLatBottom: 51.0,
+			FilterLatTop:    52.0,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -836,8 +757,8 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.LightAidsRadius(ctx, &GetLocationLightaidsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 4.5,
+			FilterLatitude:  51.5,
 			FilterRadius:    100000,
 			PaginationLimit: Ptr(5),
 		})
@@ -853,10 +774,10 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.MODUsBoundingBox(ctx, &GetLocationModuBoundingBoxParams{
-			FilterLonLeft:   Ptr(-89.0),
-			FilterLonRight:  Ptr(-88.0),
-			FilterLatBottom: Ptr(28.0),
-			FilterLatTop:    Ptr(29.0),
+			FilterLonLeft:   -89.0,
+			FilterLonRight:  -88.0,
+			FilterLatBottom: 28.0,
+			FilterLatTop:    29.0,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -871,8 +792,8 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.MODUsRadius(ctx, &GetLocationModuRadiusParams{
-			FilterLongitude: Ptr(-88.5),
-			FilterLatitude:  Ptr(28.2),
+			FilterLongitude: -88.5,
+			FilterLatitude:  28.2,
 			FilterRadius:    50000,
 			PaginationLimit: Ptr(5),
 		})
@@ -888,10 +809,10 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.RadioBeaconsBoundingBox(ctx, &GetLocationRadiobeaconsBoundingBoxParams{
-			FilterLonLeft:   Ptr(-1.0),
-			FilterLonRight:  Ptr(1.0),
-			FilterLatBottom: Ptr(50.0),
-			FilterLatTop:    Ptr(51.0),
+			FilterLonLeft:   -1.0,
+			FilterLonRight:  1.0,
+			FilterLatBottom: 50.0,
+			FilterLatTop:    51.0,
 			PaginationLimit: Ptr(5),
 		})
 		if err != nil {
@@ -906,8 +827,8 @@ func TestSmoke_Location(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		resp, err := client.Location.RadioBeaconsRadius(ctx, &GetLocationRadiobeaconsRadiusParams{
-			FilterLongitude: Ptr(-0.1),
-			FilterLatitude:  Ptr(50.8),
+			FilterLongitude: -0.1,
+			FilterLatitude:  50.8,
 			FilterRadius:    100000,
 			PaginationLimit: Ptr(5),
 		})
@@ -921,35 +842,7 @@ func TestSmoke_Location(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Navtex (1 subtest)
 // ---------------------------------------------------------------------------
-
-func TestSmoke_Navtex(t *testing.T) {
-	client := getSmokeClient(t)
-
-	t.Run("List", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		now := time.Now().UTC()
-		from := now.Add(-24 * time.Hour).Format(time.RFC3339)
-		to := now.Format(time.RFC3339)
-		resp, err := client.Navtex.List(ctx, &GetNavtexParams{
-			TimeFrom:        Ptr(from),
-			TimeTo:          Ptr(to),
-			PaginationLimit: Ptr(5),
-		})
-		if err != nil {
-			t.Fatalf("Navtex.List: %v", err)
-		}
-		if resp == nil {
-			t.Fatal("expected non-nil navtex response")
-		}
-		// NAVTEX messages are frequent; there should be some in the last 24h.
-		if len(Deref(resp.NavtexMessages)) == 0 {
-			t.Log("warning: no NAVTEX messages in last 24h")
-		}
-	})
-}
 
 // ---------------------------------------------------------------------------
 // Helper: assert an APIError with a specific status code.
@@ -1008,42 +901,6 @@ func TestSmoke_Vessels_BadParams(t *testing.T) {
 		ctx := smokeCtx(t)
 		_, err := client.Vessels.ETA(ctx, "0000000", &GetVesselIdEtaParams{
 			FilterIdType: GetVesselIdEtaParamsFilterIdTypeImo,
-		})
-		requireAPIError(t, err, 404)
-	})
-
-	t.Run("Classification_NotFound", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		_, err := client.Vessels.Classification(ctx, "0000000", &GetVesselIdClassificationParams{
-			FilterIdType: GetVesselIdClassificationParamsFilterIdTypeImo,
-		})
-		requireAPIError(t, err, 404)
-	})
-
-	t.Run("Ownership_NotFound", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		_, err := client.Vessels.Ownership(ctx, "0000000", &GetVesselIdOwnershipParams{
-			FilterIdType: GetVesselIdOwnershipParamsFilterIdTypeImo,
-		})
-		requireAPIError(t, err, 404)
-	})
-
-	t.Run("Inspections_NotFound", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		_, err := client.Vessels.Inspections(ctx, "0000000", &GetVesselIdInspectionsParams{
-			FilterIdType: GetVesselIdInspectionsParamsFilterIdTypeImo,
-		})
-		requireAPIError(t, err, 404)
-	})
-
-	t.Run("InspectionDetail_NotFound", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		_, err := client.Vessels.InspectionDetail(ctx, "0000000", "nonexistent", &GetVesselIdInspectionsDetailIdParams{
-			FilterIdType: GetVesselIdInspectionsDetailIdParamsFilterIdTypeImo,
 		})
 		requireAPIError(t, err, 404)
 	})
@@ -1324,8 +1181,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(91.0),
+			FilterLongitude: 4.5,
+			FilterLatitude:  91.0,
 			FilterRadius:    10000,
 		})
 		requireAPIError(t, err, 400)
@@ -1335,8 +1192,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
-			FilterLongitude: Ptr(181.0),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 181.0,
+			FilterLatitude:  51.5,
 			FilterRadius:    10000,
 		})
 		requireAPIError(t, err, 400)
@@ -1346,8 +1203,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 4.5,
+			FilterLatitude:  51.5,
 			FilterRadius:    200000,
 		})
 		requireAPIError(t, err, 400)
@@ -1357,8 +1214,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 4.5,
+			FilterLatitude:  51.5,
 			FilterRadius:    -1,
 		})
 		requireAPIError(t, err, 400)
@@ -1368,10 +1225,10 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.VesselsBoundingBox(ctx, &GetLocationVesselsBoundingBoxParams{
-			FilterLonLeft:   Ptr(4.0),
-			FilterLonRight:  Ptr(5.0),
-			FilterLatBottom: Ptr(52.0),
-			FilterLatTop:    Ptr(51.0), // inverted: bottom > top
+			FilterLonLeft:   4.0,
+			FilterLonRight:  5.0,
+			FilterLatBottom: 52.0,
+			FilterLatTop:    51.0, // inverted: bottom > top
 		})
 		requireAPIError(t, err, 400)
 	})
@@ -1380,10 +1237,10 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.VesselsBoundingBox(ctx, &GetLocationVesselsBoundingBoxParams{
-			FilterLonLeft:   Ptr(4.0),
-			FilterLonRight:  Ptr(5.0),
-			FilterLatBottom: Ptr(51.0),
-			FilterLatTop:    Ptr(52.0),
+			FilterLonLeft:   4.0,
+			FilterLonRight:  5.0,
+			FilterLatBottom: 51.0,
+			FilterLatTop:    52.0,
 			PaginationLimit: Ptr(999),
 		})
 		requireAPIError(t, err, 400)
@@ -1393,8 +1250,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.PortsRadius(ctx, &GetLocationPortsRadiusParams{
-			FilterLongitude: Ptr(4.5),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: 4.5,
+			FilterLatitude:  51.5,
 			FilterRadius:    200000,
 		})
 		requireAPIError(t, err, 400)
@@ -1404,10 +1261,10 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.PortsBoundingBox(ctx, &GetLocationPortsBoundingBoxParams{
-			FilterLonLeft:   Ptr(5.0),
-			FilterLonRight:  Ptr(4.0), // inverted: left > right
-			FilterLatBottom: Ptr(51.0),
-			FilterLatTop:    Ptr(52.0),
+			FilterLonLeft:   5.0,
+			FilterLonRight:  4.0, // inverted: left > right
+			FilterLatBottom: 51.0,
+			FilterLatTop:    52.0,
 		})
 		requireAPIError(t, err, 400)
 	})
@@ -1416,8 +1273,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.DGPSRadius(ctx, &GetLocationDgpsRadiusParams{
-			FilterLongitude: Ptr(8.0),
-			FilterLatitude:  Ptr(-91.0),
+			FilterLongitude: 8.0,
+			FilterLatitude:  -91.0,
 			FilterRadius:    10000,
 		})
 		requireAPIError(t, err, 400)
@@ -1427,8 +1284,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.LightAidsRadius(ctx, &GetLocationLightaidsRadiusParams{
-			FilterLongitude: Ptr(-181.0),
-			FilterLatitude:  Ptr(51.5),
+			FilterLongitude: -181.0,
+			FilterLatitude:  51.5,
 			FilterRadius:    10000,
 		})
 		requireAPIError(t, err, 400)
@@ -1438,8 +1295,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.MODUsRadius(ctx, &GetLocationModuRadiusParams{
-			FilterLongitude: Ptr(-88.5),
-			FilterLatitude:  Ptr(28.2),
+			FilterLongitude: -88.5,
+			FilterLatitude:  28.2,
 			FilterRadius:    200000,
 		})
 		requireAPIError(t, err, 400)
@@ -1449,8 +1306,8 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 		t.Parallel()
 		ctx := smokeCtx(t)
 		_, err := client.Location.RadioBeaconsRadius(ctx, &GetLocationRadiobeaconsRadiusParams{
-			FilterLongitude: Ptr(-0.1),
-			FilterLatitude:  Ptr(50.8),
+			FilterLongitude: -0.1,
+			FilterLatitude:  50.8,
 			FilterRadius:    200000,
 		})
 		requireAPIError(t, err, 400)
@@ -1458,28 +1315,4 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Bad-param: Navtex (malformed timestamps, bad pagination)
 // ---------------------------------------------------------------------------
-
-func TestSmoke_Navtex_BadParams(t *testing.T) {
-	client := getSmokeClient(t)
-
-	t.Run("List_MalformedTimeFrom", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		_, err := client.Navtex.List(ctx, &GetNavtexParams{
-			TimeFrom: Ptr("not-a-date"),
-		})
-		requireAPIError(t, err, 400)
-	})
-
-	t.Run("List_PaginationLimitNegative", func(t *testing.T) {
-		t.Parallel()
-		ctx := smokeCtx(t)
-		_, err := client.Navtex.List(ctx, &GetNavtexParams{
-			PaginationLimit: Ptr(-1),
-		})
-		requireAPIError(t, err, 400)
-	})
-}
-

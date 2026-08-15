@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -147,8 +148,11 @@ func TestIterator_CollectError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from Collect")
 	}
-	if items != nil {
-		t.Errorf("expected nil items on error, got %v", items)
+	// Collect returns what it managed to gather alongside the error. Those pages
+	// were already fetched and billed, and the iterator cannot be rewound, so
+	// discarding them would lose them permanently.
+	if len(items) != 1 || items[0] != 1 {
+		t.Errorf("expected the page fetched before the error, got %v", items)
 	}
 }
 
@@ -375,5 +379,133 @@ func TestDerefSlice(t *testing.T) {
 	result = derefSlice(&s)
 	if len(result) != 2 || result[0] != "a" {
 		t.Errorf("expected [a b], got %v", result)
+	}
+}
+
+// TestIteratorEmptyPageWithToken covers a page that arrives empty while later
+// pages still hold items. Stopping there would drop them with no error.
+func TestIteratorEmptyPageWithToken(t *testing.T) {
+	pages := []struct {
+		items []int
+		token *string
+	}{
+		{[]int{1, 2}, Ptr("a")},
+		{nil, Ptr("b")},
+		{[]int{3, 4}, nil},
+	}
+	i := 0
+	it := newIterator(func() ([]int, *string, error) {
+		p := pages[i]
+		i++
+		return p.items, p.token, nil
+	})
+
+	got, err := it.Collect()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 4 {
+		t.Errorf("collected %v, want all four items", got)
+	}
+	if i != 3 {
+		t.Errorf("fetched %d pages, want 3", i)
+	}
+}
+
+// TestIteratorStopsOnRepeatedToken guards against a service that keeps handing
+// back the token it was given, which would otherwise loop at full speed.
+func TestIteratorStopsOnRepeatedToken(t *testing.T) {
+	calls := 0
+	it := newIterator(func() ([]int, *string, error) {
+		calls++
+		if calls > 100 {
+			t.Fatal("iterator did not stop on a repeated token")
+		}
+		return []int{calls}, Ptr("SAME"), nil
+	})
+
+	got, err := it.Collect()
+	// Stopping early is a short read, so it must be reported. A caller told
+	// nothing cannot tell an early stop apart from a complete iteration.
+	if err == nil {
+		t.Fatal("expected an error when the service repeated its token")
+	}
+	if !strings.Contains(err.Error(), "reissued token") {
+		t.Errorf("error should name the cause, got %v", err)
+	}
+	if calls > 5 {
+		t.Errorf("made %d requests before stopping, want a small number", calls)
+	}
+	t.Logf("stopped after %d requests with %d items: %v", calls, len(got), err)
+}
+
+// TestIteratorBoundsEmptyPages covers a service that returns an empty page with
+// a fresh token every time. Without a cap the iterator would follow it forever,
+// spending a billed request each turn.
+func TestIteratorBoundsEmptyPages(t *testing.T) {
+	calls := 0
+	it := newIterator(func() ([]int, *string, error) {
+		calls++
+		if calls > maxConsecutiveEmptyPages*3 {
+			t.Fatal("iterator did not bound empty pages")
+		}
+		tok := fmt.Sprintf("cursor-%d", calls)
+		return nil, &tok, nil
+	})
+
+	got, err := it.Collect()
+	if err == nil {
+		t.Fatal("expected an error when the empty-page limit is reached")
+	}
+	if !strings.Contains(err.Error(), "consecutive empty pages") {
+		t.Errorf("error should name the cause, got %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("expected no items, got %v", got)
+	}
+	if calls != maxConsecutiveEmptyPages {
+		t.Errorf("made %d requests, want %d", calls, maxConsecutiveEmptyPages)
+	}
+}
+
+// TestIteratorPinsTimeWindow covers the two vessel location endpoints, where the
+// spec warns that a nextToken is only valid alongside the same time bounds and
+// that mismatched bounds silently return rows from a different slice.
+func TestIteratorPinsTimeWindow(t *testing.T) {
+	var windows []string
+	page := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		windows = append(windows, q.Get("time.from")+"/"+q.Get("time.to"))
+		w.Header().Set("Content-Type", "application/json")
+		page++
+		if page < 3 {
+			fmt.Fprintf(w, `{"vessels":[{"imo":%d}],"nextToken":"t%d"}`, page, page)
+			return
+		}
+		fmt.Fprint(w, `{"vessels":[{"imo":99}],"nextToken":null}`)
+	}))
+	defer ts.Close()
+
+	vc, err := NewVesselClient("k", WithVesselBaseURL(ts.URL))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := vc.Location.AllVesselsBoundingBox(context.Background(), &GetLocationVesselsBoundingBoxParams{
+		FilterLonLeft: 1, FilterLonRight: 2, FilterLatBottom: 1, FilterLatTop: 2,
+	}).Collect(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(windows) < 2 {
+		t.Fatalf("expected several pages, got %d", len(windows))
+	}
+	for i, w := range windows {
+		if w == "/" {
+			t.Fatalf("page %d sent no time window", i+1)
+		}
+		if w != windows[0] {
+			t.Errorf("page %d used window %q, want %q", i+1, w, windows[0])
+		}
 	}
 }

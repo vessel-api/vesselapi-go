@@ -3,15 +3,25 @@ package vesselapi
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // fetchFunc is a function that fetches a page of items and returns
 // the items, an optional next-page token, and any error.
 type fetchFunc[T any] func() (items []T, nextToken *string, err error)
 
+// maxConsecutiveEmptyPages bounds how many empty pages the iterator will walk
+// through before giving up. A service that keeps returning an empty page with a
+// fresh token would otherwise be followed indefinitely, one billed request per
+// turn.
+const maxConsecutiveEmptyPages = 20
+
 // Iterator provides lazy, sequential access to paginated API results.
 // Use Next to advance, Value to read the current item, and Err to check
 // for errors. Collect returns all remaining items.
+//
+// An Iterator is not safe for concurrent use. Drive it from one goroutine, or
+// guard it yourself.
 type Iterator[T any] struct {
 	fetch   fetchFunc[T]
 	items   []T
@@ -19,6 +29,14 @@ type Iterator[T any] struct {
 	done    bool
 	err     error
 	started bool
+
+	// seenTokens records the tokens the service has already issued. A cursor
+	// that cycles (a, b, a, b) never repeats consecutively, so comparing only
+	// against the previous one would follow it without limit.
+	seenTokens map[string]struct{}
+
+	// emptyPages counts consecutive pages that arrived with no items.
+	emptyPages int
 }
 
 func newIterator[T any](fetch fetchFunc[T]) *Iterator[T] {
@@ -29,46 +47,77 @@ func newIterator[T any](fetch fetchFunc[T]) *Iterator[T] {
 // is another item available, or false when iteration is complete or an
 // error has occurred.
 func (it *Iterator[T]) Next() bool {
-	if it.err != nil {
-		return false
-	}
-
 	if it.started {
 		it.index++
 	}
 	it.started = true
 
-	// If we have buffered items remaining, use them.
+	// Serve buffered items before acting on an error. The page holding them was
+	// already fetched and billed, and an early stop records its error while the
+	// page that triggered it is still buffered. Checking err first would drop
+	// those items, which is what Collect promises not to do.
 	if it.index < len(it.items) {
 		return true
 	}
 
-	// No more pages to fetch.
-	if it.done {
+	// Buffer drained: report a recorded failure, or the end of the pages.
+	if it.err != nil || it.done {
 		return false
 	}
 
-	// Fetch the next page.
-	items, nextToken, err := it.fetch()
-	if err != nil {
-		it.err = err
-		return false
+	// Keep fetching while the service hands back a token. A page can come back
+	// empty while later pages still hold items, so an empty page only ends the
+	// iteration when it arrives without a token. Stopping on the first empty
+	// page would drop the rest silently.
+	//
+	// Both escapes from this loop set err as well as done. Stopping early is a
+	// short read, and a caller that is told nothing cannot tell it apart from a
+	// complete one.
+	for !it.done {
+		items, nextToken, err := it.fetch()
+		if err != nil {
+			it.err = err
+			return false
+		}
+
+		it.items = items
+		it.index = 0
+
+		switch {
+		case nextToken == nil || *nextToken == "":
+			it.done = true
+		default:
+			if _, seen := it.seenTokens[*nextToken]; seen {
+				// The service reissued a token it has already given us.
+				// Following it would walk the same pages again indefinitely.
+				// The loop ends on the next condition check; the page fetched
+				// alongside this token is still served below.
+				it.done = true
+				it.err = fmt.Errorf("vesselapi: pagination stopped, the service reissued token %q; results may be incomplete", *nextToken)
+			} else {
+				if it.seenTokens == nil {
+					it.seenTokens = make(map[string]struct{})
+				}
+				it.seenTokens[*nextToken] = struct{}{}
+			}
+		}
+
+		if len(items) > 0 {
+			it.emptyPages = 0
+			return true
+		}
+
+		// An empty page with a fresh token each time would otherwise loop
+		// without limit, spending a request every turn.
+		it.emptyPages++
+		if !it.done && it.emptyPages >= maxConsecutiveEmptyPages {
+			it.done = true
+			it.err = fmt.Errorf("vesselapi: pagination stopped after %d consecutive empty pages; results may be incomplete", it.emptyPages)
+			return false
+		}
 	}
 
-	it.items = items
-	it.index = 0
-
-	if len(items) == 0 {
-		it.done = true
-		return false
-	}
-
-	// If there is no next token, this is the last page.
-	if nextToken == nil || *nextToken == "" {
-		it.done = true
-	}
-
-	return true
+	return false
 }
 
 // Value returns the current item. Returns the zero value of T if called
@@ -87,15 +136,77 @@ func (it *Iterator[T]) Err() error {
 }
 
 // Collect consumes the iterator and returns all remaining items.
+//
+// On failure it returns the items gathered before the error alongside it. Those
+// pages have already been fetched and paid for, and the iterator cannot be
+// rewound, so discarding them would lose them for good. Check the error before
+// treating the result as complete.
 func (it *Iterator[T]) Collect() ([]T, error) {
 	var all []T
 	for it.Next() {
 		all = append(all, it.Value())
 	}
-	if it.err != nil {
-		return nil, it.err
+	return all, it.err
+}
+
+// pinTimeWindow fixes a relative time window before the first page is requested.
+//
+// Several endpoints resolve time.from and time.to server-side relative to the
+// moment each request arrives. Left unset, every page of a walk would resolve a
+// slightly different window, so the pages would not describe one coherent
+// result set. The vessel location endpoints go further and document that a
+// nextToken is only valid alongside the bounds it was issued with, and that
+// mismatched bounds are not rejected: they silently return rows from a
+// different slice. Pinning once, before the first request, keeps every page on
+// the same window.
+//
+// lookback is the endpoint's own documented default, so pinning reproduces the
+// behaviour a caller already expects rather than narrowing it.
+func pinTimeWindow(from, to **string, lookback time.Duration) {
+	if *to == nil {
+		s := time.Now().UTC().Format(time.RFC3339)
+		*to = &s
 	}
-	return all, nil
+	if *from == nil {
+		// Derive the start from the resolved end, not from now. A caller asking
+		// for a historical slice supplies only TimeTo, and measuring back from
+		// now would hand the service a window running backwards.
+		end, err := time.Parse(time.RFC3339, **to)
+		if err != nil {
+			// Caller-supplied value in some other shape: leave it alone and let
+			// the service judge it rather than invent a start.
+			return
+		}
+		s := end.Add(-lookback).UTC().Format(time.RFC3339)
+		*from = &s
+	}
+}
+
+// pinForwardWindow fixes a forward-looking window, used by the port inbound
+// endpoint whose ETA filter defaults to now through a fixed horizon.
+func pinForwardWindow(from, to **string, ahead time.Duration) {
+	if *from == nil {
+		// Anchor on a caller-supplied end if there is one, so supplying only the
+		// far bound cannot produce a window running backwards.
+		if *to != nil {
+			if end, err := time.Parse(time.RFC3339, **to); err == nil {
+				s := end.Add(-ahead).UTC().Format(time.RFC3339)
+				*from = &s
+				return
+			}
+			return
+		}
+		s := time.Now().UTC().Format(time.RFC3339)
+		*from = &s
+	}
+	if *to == nil {
+		start, err := time.Parse(time.RFC3339, **from)
+		if err != nil {
+			return
+		}
+		s := start.Add(ahead).UTC().Format(time.RFC3339)
+		*to = &s
+	}
 }
 
 // derefSlice safely dereferences a pointer to a slice.
@@ -109,13 +220,13 @@ func derefSlice[T any](p *[]T) []T {
 // --- Ports ---
 
 // InboundAll returns an iterator over all inbound vessels for a port across pages.
-func (s *PortsService) InboundAll(ctx context.Context, unlocode string, params *PortInboundParams) *Iterator[VesselETA] {
+func (s *PortsService) InboundAll(ctx context.Context, unlocode string, params *GetPortUnlocodeInboundParams) *Iterator[VesselETA] {
 	if params == nil {
-		return newIterator(func() ([]VesselETA, *string, error) {
-			return nil, nil, fmt.Errorf("vesselapi: params with EtaFrom and EtaTo are required")
-		})
+		params = &GetPortUnlocodeInboundParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 24*time.Hour)
+	pinForwardWindow(&p.FilterEtaFrom, &p.FilterEtaTo, 72*time.Hour)
 	return newIterator(func() ([]VesselETA, *string, error) {
 		resp, err := s.Inbound(ctx, unlocode, &p)
 		if err != nil {
@@ -258,6 +369,7 @@ func (s *PortEventsService) ListAll(ctx context.Context, params *GetPorteventsPa
 		params = &GetPorteventsParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]PortEvent, *string, error) {
 		resp, err := s.List(ctx, &p)
 		if err != nil {
@@ -275,6 +387,7 @@ func (s *PortEventsService) AllByPort(ctx context.Context, unlocode string, para
 		params = &GetPorteventsPortUnlocodeParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]PortEvent, *string, error) {
 		resp, err := s.ByPort(ctx, unlocode, &p)
 		if err != nil {
@@ -292,6 +405,7 @@ func (s *PortEventsService) AllByPorts(ctx context.Context, params *GetPortevent
 		params = &GetPorteventsPortsParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]PortEvent, *string, error) {
 		resp, err := s.ByPorts(ctx, &p)
 		if err != nil {
@@ -306,9 +420,15 @@ func (s *PortEventsService) AllByPorts(ctx context.Context, params *GetPortevent
 // AllByVessel returns an iterator over all port events for a vessel.
 func (s *PortEventsService) AllByVessel(ctx context.Context, id string, params *GetPorteventsVesselIdParams) *Iterator[PortEvent] {
 	if params == nil {
-		params = &GetPorteventsVesselIdParams{FilterIdType: GetPorteventsVesselIdParamsFilterIdTypeImo}
+		params = &GetPorteventsVesselIdParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetPorteventsVesselIdParamsFilterIdTypeImo
+		params = &p
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]PortEvent, *string, error) {
 		resp, err := s.ByVessel(ctx, id, &p)
 		if err != nil {
@@ -326,6 +446,7 @@ func (s *PortEventsService) AllByVessels(ctx context.Context, params *GetPorteve
 		params = &GetPorteventsVesselsParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]PortEvent, *string, error) {
 		resp, err := s.ByVessels(ctx, &p)
 		if err != nil {
@@ -342,7 +463,12 @@ func (s *PortEventsService) AllByVessels(ctx context.Context, params *GetPorteve
 // AllCasualties returns an iterator over all casualties for a vessel.
 func (s *VesselsService) AllCasualties(ctx context.Context, id string, params *GetVesselIdCasualtiesParams) *Iterator[MarineCasualty] {
 	if params == nil {
-		params = &GetVesselIdCasualtiesParams{FilterIdType: GetVesselIdCasualtiesParamsFilterIdTypeImo}
+		params = &GetVesselIdCasualtiesParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdCasualtiesParamsFilterIdTypeImo
+		params = &p
 	}
 	p := *params
 	return newIterator(func() ([]MarineCasualty, *string, error) {
@@ -359,7 +485,12 @@ func (s *VesselsService) AllCasualties(ctx context.Context, id string, params *G
 // AllEmissions returns an iterator over all emissions for a vessel.
 func (s *VesselsService) AllEmissions(ctx context.Context, id string, params *GetVesselIdEmissionsParams) *Iterator[VesselEmission] {
 	if params == nil {
-		params = &GetVesselIdEmissionsParams{FilterIdType: GetVesselIdEmissionsParamsFilterIdTypeImo}
+		params = &GetVesselIdEmissionsParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdEmissionsParamsFilterIdTypeImo
+		params = &p
 	}
 	p := *params
 	return newIterator(func() ([]VesselEmission, *string, error) {
@@ -376,9 +507,15 @@ func (s *VesselsService) AllEmissions(ctx context.Context, id string, params *Ge
 // AllPositions returns an iterator over all positions for multiple vessels.
 func (s *VesselsService) AllPositions(ctx context.Context, params *GetVesselsPositionsParams) *Iterator[VesselPosition] {
 	if params == nil {
-		params = &GetVesselsPositionsParams{FilterIdType: GetVesselsPositionsParamsFilterIdTypeImo}
+		params = &GetVesselsPositionsParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselsPositionsParamsFilterIdTypeImo
+		params = &p
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]VesselPosition, *string, error) {
 		resp, err := s.Positions(ctx, &p)
 		if err != nil {
@@ -398,6 +535,7 @@ func (s *LocationService) AllVesselsBoundingBox(ctx context.Context, params *Get
 		params = &GetLocationVesselsBoundingBoxParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]VesselPosition, *string, error) {
 		resp, err := s.VesselsBoundingBox(ctx, &p)
 		if err != nil {
@@ -415,6 +553,7 @@ func (s *LocationService) AllVesselsRadius(ctx context.Context, params *GetLocat
 		params = &GetLocationVesselsRadiusParams{}
 	}
 	p := *params
+	pinTimeWindow(&p.TimeFrom, &p.TimeTo, 2*time.Hour)
 	return newIterator(func() ([]VesselPosition, *string, error) {
 		resp, err := s.VesselsRadius(ctx, &p)
 		if err != nil {
@@ -591,25 +730,6 @@ func (s *LocationService) AllRadioBeaconsRadius(ctx context.Context, params *Get
 			return nil, nil, err
 		}
 		items := derefSlice(resp.RadioBeacons)
-		p.PaginationNextToken = resp.NextToken
-		return items, resp.NextToken, nil
-	})
-}
-
-// --- Navtex ---
-
-// ListAll returns an iterator over all NAVTEX messages.
-func (s *NavtexService) ListAll(ctx context.Context, params *GetNavtexParams) *Iterator[Navtex] {
-	if params == nil {
-		params = &GetNavtexParams{}
-	}
-	p := *params
-	return newIterator(func() ([]Navtex, *string, error) {
-		resp, err := s.List(ctx, &p)
-		if err != nil {
-			return nil, nil, err
-		}
-		items := derefSlice(resp.NavtexMessages)
 		p.PaginationNextToken = resp.NextToken
 		return items, resp.NextToken, nil
 	})

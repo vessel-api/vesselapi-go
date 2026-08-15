@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
-	"strings"
 )
 
 // VesselsService wraps vessel-related API endpoints.
@@ -18,7 +15,12 @@ type VesselsService struct {
 // Get retrieves vessel details by ID (IMO or MMSI).
 func (s *VesselsService) Get(ctx context.Context, id string, params *GetVesselIdParams) (*VesselResponse, error) {
 	if params == nil {
-		params = &GetVesselIdParams{FilterIdType: GetVesselIdParamsFilterIdTypeImo}
+		params = &GetVesselIdParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetVesselId(ctx, id, params)
 	if err != nil {
@@ -40,7 +42,12 @@ func (s *VesselsService) Get(ctx context.Context, id string, params *GetVesselId
 // Position retrieves the latest position for a vessel.
 func (s *VesselsService) Position(ctx context.Context, id string, params *GetVesselIdPositionParams) (*VesselPositionResponse, error) {
 	if params == nil {
-		params = &GetVesselIdPositionParams{FilterIdType: GetVesselIdPositionParamsFilterIdTypeImo}
+		params = &GetVesselIdPositionParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdPositionParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetVesselIdPosition(ctx, id, params)
 	if err != nil {
@@ -62,7 +69,12 @@ func (s *VesselsService) Position(ctx context.Context, id string, params *GetVes
 // Casualties retrieves marine casualty records for a vessel.
 func (s *VesselsService) Casualties(ctx context.Context, id string, params *GetVesselIdCasualtiesParams) (*MarineCasualtiesResponse, error) {
 	if params == nil {
-		params = &GetVesselIdCasualtiesParams{FilterIdType: GetVesselIdCasualtiesParamsFilterIdTypeImo}
+		params = &GetVesselIdCasualtiesParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdCasualtiesParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetVesselIdCasualties(ctx, id, params)
 	if err != nil {
@@ -81,32 +93,15 @@ func (s *VesselsService) Casualties(ctx context.Context, id string, params *GetV
 	return parsed.JSON200, nil
 }
 
-// Classification retrieves classification data for a vessel.
-func (s *VesselsService) Classification(ctx context.Context, id string, params *GetVesselIdClassificationParams) (*ClassificationResponse, error) {
-	if params == nil {
-		params = &GetVesselIdClassificationParams{FilterIdType: GetVesselIdClassificationParamsFilterIdTypeImo}
-	}
-	rsp, err := s.client.GetVesselIdClassification(ctx, id, params)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	parsed, err := ParseGetVesselIdClassificationResponse(rsp)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
-		return nil, err
-	}
-	if parsed.JSON200 == nil {
-		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
-	}
-	return parsed.JSON200, nil
-}
-
 // Emissions retrieves emissions data for a vessel.
 func (s *VesselsService) Emissions(ctx context.Context, id string, params *GetVesselIdEmissionsParams) (*VesselEmissionsResponse, error) {
 	if params == nil {
-		params = &GetVesselIdEmissionsParams{FilterIdType: GetVesselIdEmissionsParamsFilterIdTypeImo}
+		params = &GetVesselIdEmissionsParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdEmissionsParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetVesselIdEmissions(ctx, id, params)
 	if err != nil {
@@ -128,7 +123,12 @@ func (s *VesselsService) Emissions(ctx context.Context, id string, params *GetVe
 // ETA retrieves the estimated time of arrival for a vessel.
 func (s *VesselsService) ETA(ctx context.Context, id string, params *GetVesselIdEtaParams) (*VesselETAResponse, error) {
 	if params == nil {
-		params = &GetVesselIdEtaParams{FilterIdType: GetVesselIdEtaParamsFilterIdTypeImo}
+		params = &GetVesselIdEtaParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselIdEtaParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetVesselIdEta(ctx, id, params)
 	if err != nil {
@@ -147,76 +147,18 @@ func (s *VesselsService) ETA(ctx context.Context, id string, params *GetVesselId
 	return parsed.JSON200, nil
 }
 
-// Inspections retrieves inspection records for a vessel.
-func (s *VesselsService) Inspections(ctx context.Context, id string, params *GetVesselIdInspectionsParams) (*TypesInspectionsResponse, error) {
-	if params == nil {
-		params = &GetVesselIdInspectionsParams{FilterIdType: GetVesselIdInspectionsParamsFilterIdTypeImo}
-	}
-	rsp, err := s.client.GetVesselIdInspections(ctx, id, params)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	parsed, err := ParseGetVesselIdInspectionsResponse(rsp)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
-		return nil, err
-	}
-	if parsed.JSON200 == nil {
-		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
-	}
-	return parsed.JSON200, nil
-}
-
-// InspectionDetail retrieves detailed inspection data.
-func (s *VesselsService) InspectionDetail(ctx context.Context, id, detailId string, params *GetVesselIdInspectionsDetailIdParams) (*TypesInspectionDetailResponse, error) {
-	if params == nil {
-		params = &GetVesselIdInspectionsDetailIdParams{FilterIdType: GetVesselIdInspectionsDetailIdParamsFilterIdTypeImo}
-	}
-	rsp, err := s.client.GetVesselIdInspectionsDetailId(ctx, id, detailId, params)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	parsed, err := ParseGetVesselIdInspectionsDetailIdResponse(rsp)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
-		return nil, err
-	}
-	if parsed.JSON200 == nil {
-		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
-	}
-	return parsed.JSON200, nil
-}
-
-// Ownership retrieves ownership data for a vessel.
-func (s *VesselsService) Ownership(ctx context.Context, id string, params *GetVesselIdOwnershipParams) (*TypesOwnershipResponse, error) {
-	if params == nil {
-		params = &GetVesselIdOwnershipParams{FilterIdType: GetVesselIdOwnershipParamsFilterIdTypeImo}
-	}
-	rsp, err := s.client.GetVesselIdOwnership(ctx, id, params)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	parsed, err := ParseGetVesselIdOwnershipResponse(rsp)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
-		return nil, err
-	}
-	if parsed.JSON200 == nil {
-		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
-	}
-	return parsed.JSON200, nil
-}
-
 // Positions retrieves positions for multiple vessels.
 func (s *VesselsService) Positions(ctx context.Context, params *GetVesselsPositionsParams) (*VesselPositionsResponse, error) {
 	if params == nil {
-		params = &GetVesselsPositionsParams{FilterIdType: GetVesselsPositionsParamsFilterIdTypeImo}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.ids", params.FilterIds); err != nil {
+		return nil, err
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetVesselsPositionsParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetVesselsPositions(ctx, params)
 	if err != nil {
@@ -259,77 +201,29 @@ func (s *PortsService) Get(ctx context.Context, unlocode string) (*PortResponse,
 	return parsed.JSON200, nil
 }
 
-// PortInboundParams defines parameters for the port inbound endpoint.
-type PortInboundParams struct {
-	// EtaFrom Start of ETA arrival window in RFC3339 format (required)
-	EtaFrom string
-	// EtaTo End of ETA arrival window in RFC3339 format (required)
-	EtaTo string
-	// TimeFrom Report freshness start (optional, defaults to 24 hours ago)
-	TimeFrom *string
-	// TimeTo Report freshness end (optional, defaults to current time)
-	TimeTo *string
-	// PaginationLimit Maximum number of items to return (1-50, default 20)
-	PaginationLimit *int
-	// PaginationNextToken Token for next page
-	PaginationNextToken *string
-}
-
 // Inbound retrieves vessels heading to a port within an ETA window.
-func (s *PortsService) Inbound(ctx context.Context, unlocode string, params *PortInboundParams) (*PortInboundResponse, error) {
+//
+// The ETA window is optional. Leave FilterEtaFrom and FilterEtaTo nil and the
+// service covers now to 72 hours ahead.
+func (s *PortsService) Inbound(ctx context.Context, unlocode string, params *GetPortUnlocodeInboundParams) (*PortInboundResponse, error) {
 	if params == nil {
-		return nil, fmt.Errorf("vesselapi: params with EtaFrom and EtaTo are required")
+		params = &GetPortUnlocodeInboundParams{}
 	}
-	serverURL, err := url.Parse(s.client.Server)
+	rsp, err := s.client.GetPortUnlocodeInbound(ctx, unlocode, params)
 	if err != nil {
 		return nil, fmt.Errorf("vesselapi: %w", err)
 	}
-	operationPath := fmt.Sprintf("./port/%s/inbound", url.PathEscape(unlocode))
-	queryURL, err := serverURL.Parse(operationPath)
+	parsed, err := ParseGetPortUnlocodeInboundResponse(rsp)
 	if err != nil {
 		return nil, fmt.Errorf("vesselapi: %w", err)
 	}
-	q := queryURL.Query()
-	q.Set("filter.etaFrom", params.EtaFrom)
-	q.Set("filter.etaTo", params.EtaTo)
-	if params.TimeFrom != nil {
-		q.Set("time.from", *params.TimeFrom)
-	}
-	if params.TimeTo != nil {
-		q.Set("time.to", *params.TimeTo)
-	}
-	if params.PaginationLimit != nil {
-		q.Set("pagination.limit", fmt.Sprintf("%d", *params.PaginationLimit))
-	}
-	if params.PaginationNextToken != nil {
-		q.Set("pagination.nextToken", *params.PaginationNextToken)
-	}
-	queryURL.RawQuery = q.Encode()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	rsp, err := s.client.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	_ = rsp.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	if err := errFromStatus(rsp.StatusCode, bodyBytes); err != nil {
+	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
 	}
-	if !strings.Contains(rsp.Header.Get("Content-Type"), "json") || len(bodyBytes) == 0 {
-		return nil, &APIError{StatusCode: rsp.StatusCode, Message: "unexpected empty response", Body: bodyBytes}
+	if parsed.JSON200 == nil {
+		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
 	}
-	var result PortInboundResponse
-	if err := json.Unmarshal(bodyBytes, &result); err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	return &result, nil
+	return parsed.JSON200, nil
 }
 
 // PortEventsService wraps port event API endpoints.
@@ -384,7 +278,10 @@ func (s *PortEventsService) ByPort(ctx context.Context, unlocode string, params 
 // ByPorts retrieves port events by port name search.
 func (s *PortEventsService) ByPorts(ctx context.Context, params *GetPorteventsPortsParams) (*PortEventsResponse, error) {
 	if params == nil {
-		params = &GetPorteventsPortsParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.portName", params.FilterPortName); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetPorteventsPorts(ctx, params)
 	if err != nil {
@@ -406,7 +303,12 @@ func (s *PortEventsService) ByPorts(ctx context.Context, params *GetPorteventsPo
 // ByVessel retrieves port events for a specific vessel.
 func (s *PortEventsService) ByVessel(ctx context.Context, id string, params *GetPorteventsVesselIdParams) (*PortEventsResponse, error) {
 	if params == nil {
-		params = &GetPorteventsVesselIdParams{FilterIdType: GetPorteventsVesselIdParamsFilterIdTypeImo}
+		params = &GetPorteventsVesselIdParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetPorteventsVesselIdParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetPorteventsVesselId(ctx, id, params)
 	if err != nil {
@@ -428,7 +330,12 @@ func (s *PortEventsService) ByVessel(ctx context.Context, id string, params *Get
 // LastByVessel retrieves the last port event for a vessel.
 func (s *PortEventsService) LastByVessel(ctx context.Context, id string, params *GetPorteventsVesselIdLastParams) (*PortEventResponse, error) {
 	if params == nil {
-		params = &GetPorteventsVesselIdLastParams{FilterIdType: GetPorteventsVesselIdLastParamsFilterIdTypeImo}
+		params = &GetPorteventsVesselIdLastParams{}
+	}
+	if params.FilterIdType == "" {
+		p := *params
+		p.FilterIdType = GetPorteventsVesselIdLastParamsFilterIdTypeImo
+		params = &p
 	}
 	rsp, err := s.client.GetPorteventsVesselIdLast(ctx, id, params)
 	if err != nil {
@@ -450,7 +357,10 @@ func (s *PortEventsService) LastByVessel(ctx context.Context, id string, params 
 // ByVessels retrieves port events by vessel name search.
 func (s *PortEventsService) ByVessels(ctx context.Context, params *GetPorteventsVesselsParams) (*PortEventsResponse, error) {
 	if params == nil {
-		params = &GetPorteventsVesselsParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.vesselName", params.FilterVesselName); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetPorteventsVessels(ctx, params)
 	if err != nil {
@@ -548,7 +458,10 @@ func (s *SearchService) Ports(ctx context.Context, params *GetSearchPortsParams)
 // DGPS searches for DGPS stations by name.
 func (s *SearchService) DGPS(ctx context.Context, params *GetSearchDgpsParams) (*FindDGPSStationsResponse, error) {
 	if params == nil {
-		params = &GetSearchDgpsParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.name", params.FilterName); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetSearchDgps(ctx, params)
 	if err != nil {
@@ -570,7 +483,10 @@ func (s *SearchService) DGPS(ctx context.Context, params *GetSearchDgpsParams) (
 // LightAids searches for light aids by name.
 func (s *SearchService) LightAids(ctx context.Context, params *GetSearchLightaidsParams) (*FindLightAidsResponse, error) {
 	if params == nil {
-		params = &GetSearchLightaidsParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.name", params.FilterName); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetSearchLightaids(ctx, params)
 	if err != nil {
@@ -592,7 +508,10 @@ func (s *SearchService) LightAids(ctx context.Context, params *GetSearchLightaid
 // MODUs searches for MODUs (Mobile Offshore Drilling Units) by name.
 func (s *SearchService) MODUs(ctx context.Context, params *GetSearchModusParams) (*FindMODUsResponse, error) {
 	if params == nil {
-		params = &GetSearchModusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.name", params.FilterName); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetSearchModus(ctx, params)
 	if err != nil {
@@ -614,7 +533,10 @@ func (s *SearchService) MODUs(ctx context.Context, params *GetSearchModusParams)
 // RadioBeacons searches for radio beacons by name.
 func (s *SearchService) RadioBeacons(ctx context.Context, params *GetSearchRadiobeaconsParams) (*FindRadioBeaconsResponse, error) {
 	if params == nil {
-		params = &GetSearchRadiobeaconsParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := requireString("filter.name", params.FilterName); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetSearchRadiobeacons(ctx, params)
 	if err != nil {
@@ -641,7 +563,10 @@ type LocationService struct {
 // VesselsBoundingBox retrieves vessel positions within a bounding box.
 func (s *LocationService) VesselsBoundingBox(ctx context.Context, params *GetLocationVesselsBoundingBoxParams) (*VesselsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationVesselsBoundingBoxParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateBoundingBox(params.FilterLonLeft, params.FilterLonRight, params.FilterLatBottom, params.FilterLatTop); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationVesselsBoundingBox(ctx, params)
 	if err != nil {
@@ -663,7 +588,10 @@ func (s *LocationService) VesselsBoundingBox(ctx context.Context, params *GetLoc
 // VesselsRadius retrieves vessel positions within a radius.
 func (s *LocationService) VesselsRadius(ctx context.Context, params *GetLocationVesselsRadiusParams) (*VesselsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationVesselsRadiusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateRadius(params.FilterLongitude, params.FilterLatitude, params.FilterRadius); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationVesselsRadius(ctx, params)
 	if err != nil {
@@ -685,7 +613,10 @@ func (s *LocationService) VesselsRadius(ctx context.Context, params *GetLocation
 // PortsBoundingBox retrieves ports within a bounding box.
 func (s *LocationService) PortsBoundingBox(ctx context.Context, params *GetLocationPortsBoundingBoxParams) (*PortsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationPortsBoundingBoxParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateBoundingBox(params.FilterLonLeft, params.FilterLonRight, params.FilterLatBottom, params.FilterLatTop); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationPortsBoundingBox(ctx, params)
 	if err != nil {
@@ -707,7 +638,10 @@ func (s *LocationService) PortsBoundingBox(ctx context.Context, params *GetLocat
 // PortsRadius retrieves ports within a radius.
 func (s *LocationService) PortsRadius(ctx context.Context, params *GetLocationPortsRadiusParams) (*PortsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationPortsRadiusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateRadius(params.FilterLongitude, params.FilterLatitude, params.FilterRadius); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationPortsRadius(ctx, params)
 	if err != nil {
@@ -729,7 +663,10 @@ func (s *LocationService) PortsRadius(ctx context.Context, params *GetLocationPo
 // DGPSBoundingBox retrieves DGPS stations within a bounding box.
 func (s *LocationService) DGPSBoundingBox(ctx context.Context, params *GetLocationDgpsBoundingBoxParams) (*DGPSStationsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationDgpsBoundingBoxParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateBoundingBox(params.FilterLonLeft, params.FilterLonRight, params.FilterLatBottom, params.FilterLatTop); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationDgpsBoundingBox(ctx, params)
 	if err != nil {
@@ -751,7 +688,10 @@ func (s *LocationService) DGPSBoundingBox(ctx context.Context, params *GetLocati
 // DGPSRadius retrieves DGPS stations within a radius.
 func (s *LocationService) DGPSRadius(ctx context.Context, params *GetLocationDgpsRadiusParams) (*DGPSStationsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationDgpsRadiusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateRadius(params.FilterLongitude, params.FilterLatitude, params.FilterRadius); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationDgpsRadius(ctx, params)
 	if err != nil {
@@ -773,7 +713,10 @@ func (s *LocationService) DGPSRadius(ctx context.Context, params *GetLocationDgp
 // LightAidsBoundingBox retrieves light aids within a bounding box.
 func (s *LocationService) LightAidsBoundingBox(ctx context.Context, params *GetLocationLightaidsBoundingBoxParams) (*LightAidsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationLightaidsBoundingBoxParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateBoundingBox(params.FilterLonLeft, params.FilterLonRight, params.FilterLatBottom, params.FilterLatTop); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationLightaidsBoundingBox(ctx, params)
 	if err != nil {
@@ -795,7 +738,10 @@ func (s *LocationService) LightAidsBoundingBox(ctx context.Context, params *GetL
 // LightAidsRadius retrieves light aids within a radius.
 func (s *LocationService) LightAidsRadius(ctx context.Context, params *GetLocationLightaidsRadiusParams) (*LightAidsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationLightaidsRadiusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateRadius(params.FilterLongitude, params.FilterLatitude, params.FilterRadius); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationLightaidsRadius(ctx, params)
 	if err != nil {
@@ -817,7 +763,10 @@ func (s *LocationService) LightAidsRadius(ctx context.Context, params *GetLocati
 // MODUsBoundingBox retrieves MODUs within a bounding box.
 func (s *LocationService) MODUsBoundingBox(ctx context.Context, params *GetLocationModuBoundingBoxParams) (*MODUsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationModuBoundingBoxParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateBoundingBox(params.FilterLonLeft, params.FilterLonRight, params.FilterLatBottom, params.FilterLatTop); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationModuBoundingBox(ctx, params)
 	if err != nil {
@@ -839,7 +788,10 @@ func (s *LocationService) MODUsBoundingBox(ctx context.Context, params *GetLocat
 // MODUsRadius retrieves MODUs within a radius.
 func (s *LocationService) MODUsRadius(ctx context.Context, params *GetLocationModuRadiusParams) (*MODUsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationModuRadiusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateRadius(params.FilterLongitude, params.FilterLatitude, params.FilterRadius); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationModuRadius(ctx, params)
 	if err != nil {
@@ -861,7 +813,10 @@ func (s *LocationService) MODUsRadius(ctx context.Context, params *GetLocationMo
 // RadioBeaconsBoundingBox retrieves radio beacons within a bounding box.
 func (s *LocationService) RadioBeaconsBoundingBox(ctx context.Context, params *GetLocationRadiobeaconsBoundingBoxParams) (*RadioBeaconsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationRadiobeaconsBoundingBoxParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateBoundingBox(params.FilterLonLeft, params.FilterLonRight, params.FilterLatBottom, params.FilterLatTop); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationRadiobeaconsBoundingBox(ctx, params)
 	if err != nil {
@@ -883,40 +838,16 @@ func (s *LocationService) RadioBeaconsBoundingBox(ctx context.Context, params *G
 // RadioBeaconsRadius retrieves radio beacons within a radius.
 func (s *LocationService) RadioBeaconsRadius(ctx context.Context, params *GetLocationRadiobeaconsRadiusParams) (*RadioBeaconsWithinLocationResponse, error) {
 	if params == nil {
-		params = &GetLocationRadiobeaconsRadiusParams{}
+		return nil, &ParamError{Param: "params", Reason: "is required"}
+	}
+	if err := validateRadius(params.FilterLongitude, params.FilterLatitude, params.FilterRadius); err != nil {
+		return nil, err
 	}
 	rsp, err := s.client.GetLocationRadiobeaconsRadius(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("vesselapi: %w", err)
 	}
 	parsed, err := ParseGetLocationRadiobeaconsRadiusResponse(rsp)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
-		return nil, err
-	}
-	if parsed.JSON200 == nil {
-		return nil, &APIError{StatusCode: parsed.StatusCode(), Message: "unexpected empty response", Body: parsed.Body}
-	}
-	return parsed.JSON200, nil
-}
-
-// NavtexService wraps NAVTEX message API endpoints.
-type NavtexService struct {
-	client *Client
-}
-
-// List retrieves NAVTEX maritime safety messages.
-func (s *NavtexService) List(ctx context.Context, params *GetNavtexParams) (*NavtexMessagesResponse, error) {
-	if params == nil {
-		params = &GetNavtexParams{}
-	}
-	rsp, err := s.client.GetNavtex(ctx, params)
-	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
-	}
-	parsed, err := ParseGetNavtexResponse(rsp)
 	if err != nil {
 		return nil, fmt.Errorf("vesselapi: %w", err)
 	}
@@ -936,14 +867,25 @@ func errFromStatus(statusCode int, body []byte) error {
 		return nil
 	}
 	msg := http.StatusText(statusCode)
+	var code ErrorCode
+	var errType ErrorType
 	if len(body) > 0 {
-		// Try {"error":{"message":"..."}} (Vessel API standard shape).
+		// Try {"error":{"message":"...","code":"...","type":"..."}} (Vessel API
+		// standard shape). Code and type are machine-readable and stable, so they
+		// are kept even when the body carries no message.
 		var nested struct {
 			Error struct {
-				Message string `json:"message"`
+				Message string    `json:"message"`
+				Code    ErrorCode `json:"code"`
+				Type    ErrorType `json:"type"`
 			} `json:"error"`
 		}
-		if json.Unmarshal(body, &nested) == nil && nested.Error.Message != "" {
+		nestedOK := json.Unmarshal(body, &nested) == nil
+		if nestedOK {
+			code = nested.Error.Code
+			errType = nested.Error.Type
+		}
+		if nestedOK && nested.Error.Message != "" {
 			msg = nested.Error.Message
 		} else {
 			// Try {"message":"..."} (common alternative shape).
@@ -956,5 +898,5 @@ func errFromStatus(statusCode int, body []byte) error {
 		}
 		// If both fail, msg stays as http.StatusText. Raw body is in APIError.Body.
 	}
-	return &APIError{StatusCode: statusCode, Message: msg, Body: body}
+	return &APIError{StatusCode: statusCode, Message: msg, Body: body, Code: code, Type: errType}
 }

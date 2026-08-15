@@ -11,8 +11,8 @@ examples/basic/basic
 # Go workspace
 vendor/
 
-# OpenAPI spec (fetched from live API via `make generate`)
-openapi/
+# openapi/openapi.json is committed on purpose — `make generate` reads it and
+# nothing fetches it, so ignoring it broke generation on a fresh clone.
 
 # Environment
 .env

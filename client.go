@@ -9,7 +9,9 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -37,9 +39,6 @@ type VesselClient struct {
 
 	// Location provides access to location-based endpoints.
 	Location *LocationService
-
-	// Navtex provides access to NAVTEX message endpoints.
-	Navtex *NavtexService
 }
 
 // VesselClientOption configures a VesselClient.
@@ -60,8 +59,16 @@ func WithVesselBaseURL(url string) VesselClientOption {
 }
 
 // WithVesselHTTPClient sets the underlying HTTP client used for transport.
-// The client's Transport is used as the base round-tripper; auth and retry
-// transports are layered on top.
+//
+// The client's Transport is used as the base round-tripper, with auth and retry
+// layered on top. Its Timeout, Jar and CheckRedirect are adopted too. Note that
+// Timeout covers the whole call including retries and the waits between them,
+// not one attempt.
+//
+// A supplied CheckRedirect runs after the built-in check that refuses redirects
+// leaving the configured origin. That check cannot be turned off, because the
+// API key is attached below this layer and would otherwise travel to whatever
+// host the redirect names.
 func WithVesselHTTPClient(hc *http.Client) VesselClientOption {
 	return func(c *clientConfig) {
 		c.httpClient = hc
@@ -116,11 +123,22 @@ func NewVesselClient(apiKey string, opts ...VesselClientOption) (*VesselClient, 
 		maxRetries: cfg.maxRetries,
 	}
 
-	hc := &http.Client{Transport: transport}
+	hc := &http.Client{Transport: transport, CheckRedirect: refuseOffHostRedirect}
 	if cfg.httpClient != nil {
 		hc.Timeout = cfg.httpClient.Timeout
 		hc.Jar = cfg.httpClient.Jar
-		hc.CheckRedirect = cfg.httpClient.CheckRedirect
+		if user := cfg.httpClient.CheckRedirect; user != nil {
+			// Run the key protection first, then defer to the caller. Replacing
+			// it outright would leave a caller who set CheckRedirect for an
+			// unrelated reason weaker than the standard library's own default,
+			// because the key is attached below this layer.
+			hc.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+				if err := refuseOffHostRedirect(req, via); err != nil {
+					return err
+				}
+				return user(req, via)
+			}
+		}
 	}
 
 	gen, err := NewClient(cfg.baseURL, WithHTTPClient(hc))
@@ -135,9 +153,59 @@ func NewVesselClient(apiKey string, opts ...VesselClientOption) (*VesselClient, 
 	vc.Emissions = &EmissionsService{client: gen}
 	vc.Search = &SearchService{client: gen}
 	vc.Location = &LocationService{client: gen}
-	vc.Navtex = &NavtexService{client: gen}
 
 	return vc, nil
+}
+
+// refuseOffHostRedirect stops a redirect that would send the request to another
+// host.
+//
+// The API key is attached inside the round-tripper, so it is applied afresh to
+// each redirected request. Go's usual protection, which drops sensitive headers
+// when a redirect crosses hosts, only covers headers set on the original
+// request and therefore does not apply here. Without this check a redirect to a
+// third party would arrive carrying a valid Bearer token.
+func refuseOffHostRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	if len(via) >= 10 {
+		return fmt.Errorf("vesselapi: stopped after 10 redirects")
+	}
+	from, to := via[0].URL, req.URL
+	// Compare normalised origins. A bare host comparison both over-refuses
+	// (case, explicit default port) and under-refuses: it treats an https to
+	// http downgrade on the same host as safe, which would put the key on the
+	// wire in clear.
+	if !sameOrigin(from, to) {
+		return fmt.Errorf("vesselapi: refusing to follow a redirect from %s://%s to %s://%s, "+
+			"which would disclose the API key", from.Scheme, from.Host, to.Scheme, to.Host)
+	}
+	return nil
+}
+
+// sameOrigin reports whether two URLs share a scheme and host, ignoring case
+// and an explicitly written default port. A downgrade from https is never the
+// same origin, even to the same host.
+func sameOrigin(a, b *url.URL) bool {
+	as, bs := strings.ToLower(a.Scheme), strings.ToLower(b.Scheme)
+	if as != bs {
+		return false
+	}
+	return normalisedHost(a) == normalisedHost(b)
+}
+
+func normalisedHost(u *url.URL) string {
+	h := strings.ToLower(u.Hostname())
+	port := u.Port()
+	switch {
+	case port == "",
+		strings.EqualFold(u.Scheme, "https") && port == "443",
+		strings.EqualFold(u.Scheme, "http") && port == "80":
+		return h
+	default:
+		return h + ":" + port
+	}
 }
 
 // authTransport adds Bearer token authentication and User-Agent headers.
@@ -283,9 +351,20 @@ func calcBackoff(attempt int, resp *http.Response) time.Duration {
 // capped at maxBackoff. Used for both retryable status codes and
 // transient network errors.
 func calcExpBackoff(attempt int) time.Duration {
+	// Clamp the exponent first. Converting a large float to time.Duration
+	// overflows int64 and wraps negative, and a negative duration makes the
+	// timer fire at once, turning the backoff into a hot retry loop. The cap is
+	// reached well before this bound, so clamping costs nothing.
+	if attempt > 16 {
+		attempt = 16
+	}
 	base := math.Pow(2, float64(attempt))
 	jitter := rand.Float64() * base //nolint:gosec
-	d := time.Duration((base+jitter)*500) * time.Millisecond
+	ms := (base + jitter) * 500
+	if ms > float64(maxBackoff/time.Millisecond) {
+		return maxBackoff
+	}
+	d := time.Duration(ms) * time.Millisecond
 	if d > maxBackoff {
 		d = maxBackoff
 	}
@@ -302,6 +381,17 @@ type APIError struct {
 
 	// Body is the raw response body, available for re-parsing if needed.
 	Body []byte
+
+	// Code is the machine-readable error code from the response body
+	// ("error.code"), for example ErrorCodeInsufficientCredits. Empty when the
+	// response carried no structured error. Branch on this rather than on
+	// Message, which is free-form text and may be reworded.
+	Code ErrorCode
+
+	// Type is the error category from the response body ("error.type"), for
+	// example ErrorTypePaymentRequired. Empty when the response carried no
+	// structured error.
+	Type ErrorType
 }
 
 func (e *APIError) Error() string {
@@ -316,6 +406,19 @@ func (e *APIError) IsRateLimited() bool { return e.StatusCode == 429 }
 
 // IsAuthError returns true if the error is a 401 Unauthorized response.
 func (e *APIError) IsAuthError() bool { return e.StatusCode == 401 }
+
+// IsPaymentRequired returns true if the error is a 402 Payment Required
+// response, returned when a satellite position is requested with no satellite
+// credits left and no stored position to fall back on. Top up credits, or retry
+// without the satellite fallback.
+func (e *APIError) IsPaymentRequired() bool { return e.StatusCode == 402 }
+
+// IsForbidden returns true if the error is a 403 Forbidden response, returned
+// when the API key is suspended for sustained quota abuse (see the Retry-After
+// header) or the feature is not on the caller's plan. Check Code to tell the
+// two apart: ErrorCodeForbidden for a suspended key,
+// ErrorCodeFeatureNotAvailable for a plan restriction.
+func (e *APIError) IsForbidden() bool { return e.StatusCode == 403 }
 
 // Ptr returns a pointer to the given value. Useful for constructing
 // request parameters with optional fields.

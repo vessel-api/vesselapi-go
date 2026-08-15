@@ -44,9 +44,6 @@ func TestNewVesselClient_DefaultOptions(t *testing.T) {
 	if vc.Location == nil {
 		t.Fatal("expected non-nil Location service")
 	}
-	if vc.Navtex == nil {
-		t.Fatal("expected non-nil Navtex service")
-	}
 }
 
 func TestNewVesselClient_WithOptions(t *testing.T) {
@@ -593,6 +590,228 @@ func TestAPIError_IsAuthError(t *testing.T) {
 	}
 	if e.IsRateLimited() {
 		t.Error("expected IsRateLimited() to return false for 401")
+	}
+}
+
+func TestAPIError_IsPaymentRequired(t *testing.T) {
+	e := &APIError{StatusCode: 402, Message: "insufficient satellite credits"}
+	if !e.IsPaymentRequired() {
+		t.Error("expected IsPaymentRequired() to return true for 402")
+	}
+	if e.IsForbidden() {
+		t.Error("expected IsForbidden() to return false for 402")
+	}
+	if e.IsNotFound() {
+		t.Error("expected IsNotFound() to return false for 402")
+	}
+	if e.IsRateLimited() {
+		t.Error("expected IsRateLimited() to return false for 402")
+	}
+	if e.IsAuthError() {
+		t.Error("expected IsAuthError() to return false for 402")
+	}
+}
+
+func TestAPIError_IsForbidden(t *testing.T) {
+	e := &APIError{StatusCode: 403, Message: "api key temporarily suspended"}
+	if !e.IsForbidden() {
+		t.Error("expected IsForbidden() to return true for 403")
+	}
+	if e.IsPaymentRequired() {
+		t.Error("expected IsPaymentRequired() to return false for 403")
+	}
+	if e.IsAuthError() {
+		t.Error("expected IsAuthError() to return false for 403")
+	}
+	if e.IsNotFound() {
+		t.Error("expected IsNotFound() to return false for 403")
+	}
+	if e.IsRateLimited() {
+		t.Error("expected IsRateLimited() to return false for 403")
+	}
+}
+
+func TestAPIError_ExistingHelpersUnaffectedByNewStatuses(t *testing.T) {
+	for _, tc := range []struct {
+		status int
+		is     func(*APIError) bool
+		name   string
+	}{
+		{401, (*APIError).IsAuthError, "IsAuthError"},
+		{404, (*APIError).IsNotFound, "IsNotFound"},
+		{429, (*APIError).IsRateLimited, "IsRateLimited"},
+	} {
+		e := &APIError{StatusCode: tc.status, Message: "boom"}
+		if !tc.is(e) {
+			t.Errorf("expected %s() to return true for %d", tc.name, tc.status)
+		}
+		if e.IsPaymentRequired() {
+			t.Errorf("expected IsPaymentRequired() to return false for %d", tc.status)
+		}
+		if e.IsForbidden() {
+			t.Errorf("expected IsForbidden() to return false for %d", tc.status)
+		}
+	}
+}
+
+func TestErrFromStatus_ParsesCodeAndType(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   int
+		body     string
+		wantCode ErrorCode
+		wantType ErrorType
+		wantMsg  string
+	}{
+		{
+			name:     "402 insufficient credits",
+			status:   402,
+			body:     `{"error":{"code":"insufficient_credits","message":"insufficient satellite credits","type":"payment_required_error"}}`,
+			wantCode: ErrorCodeInsufficientCredits,
+			wantType: ErrorTypePaymentRequired,
+			wantMsg:  "insufficient satellite credits",
+		},
+		{
+			name:     "403 feature not available",
+			status:   403,
+			body:     `{"error":{"code":"feature_not_available","message":"this feature is not available on the \"free\" plan","type":"forbidden_error"}}`,
+			wantCode: ErrorCodeFeatureNotAvailable,
+			wantType: ErrorTypeForbidden,
+			wantMsg:  `this feature is not available on the "free" plan`,
+		},
+		{
+			name:     "403 suspended key",
+			status:   403,
+			body:     `{"error":{"code":"forbidden","message":"api key temporarily suspended","type":"forbidden_error"}}`,
+			wantCode: ErrorCodeForbidden,
+			wantType: ErrorTypeForbidden,
+			wantMsg:  "api key temporarily suspended",
+		},
+		{
+			name:     "404 resource missing",
+			status:   404,
+			body:     `{"error":{"code":"resource_missing","message":"Vessel not found: 123456789","type":"not_found_error"}}`,
+			wantCode: ErrorCodeResourceMissing,
+			wantType: ErrorTypeNotFoundError,
+			wantMsg:  "Vessel not found: 123456789",
+		},
+		{
+			name:     "code kept when message is absent",
+			status:   402,
+			body:     `{"error":{"code":"insufficient_credits","type":"payment_required_error"}}`,
+			wantCode: ErrorCodeInsufficientCredits,
+			wantType: ErrorTypePaymentRequired,
+			wantMsg:  http.StatusText(402),
+		},
+		{
+			name:    "no code on an unstructured body",
+			status:  403,
+			body:    `<html>Forbidden</html>`,
+			wantMsg: http.StatusText(403),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := errFromStatus(tt.status, []byte(tt.body))
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			var apiErr *APIError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("expected *APIError, got %T", err)
+			}
+			if apiErr.Code != tt.wantCode {
+				t.Errorf("expected code %q, got %q", tt.wantCode, apiErr.Code)
+			}
+			if apiErr.Type != tt.wantType {
+				t.Errorf("expected type %q, got %q", tt.wantType, apiErr.Type)
+			}
+			if apiErr.Message != tt.wantMsg {
+				t.Errorf("expected message %q, got %q", tt.wantMsg, apiErr.Message)
+			}
+		})
+	}
+}
+
+func TestServiceEndToEnd_PaymentRequired(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusPaymentRequired)
+		fmt.Fprint(w, `{"error":{"code":"insufficient_credits","message":"insufficient satellite credits","type":"payment_required_error"}}`)
+	}))
+	defer ts.Close()
+
+	vc, err := NewVesselClient("test-key",
+		WithVesselBaseURL(ts.URL),
+		WithVesselRetry(0),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = vc.Vessels.Position(context.Background(), "9811000", &GetVesselIdPositionParams{
+		FilterSat: Ptr(true),
+	})
+	if err == nil {
+		t.Fatal("expected error for 402 response")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *APIError, got %T", err)
+	}
+	if !apiErr.IsPaymentRequired() {
+		t.Errorf("expected IsPaymentRequired() to return true, got status %d", apiErr.StatusCode)
+	}
+	if apiErr.IsForbidden() {
+		t.Error("expected IsForbidden() to return false for 402")
+	}
+	if apiErr.Code != ErrorCodeInsufficientCredits {
+		t.Errorf("expected code %q, got %q", ErrorCodeInsufficientCredits, apiErr.Code)
+	}
+	if apiErr.Type != ErrorTypePaymentRequired {
+		t.Errorf("expected type %q, got %q", ErrorTypePaymentRequired, apiErr.Type)
+	}
+}
+
+func TestServiceEndToEnd_Forbidden(t *testing.T) {
+	var attempts atomic.Int32
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, `{"error":{"code":"feature_not_available","message":"this feature is not available on the \"free\" plan","type":"forbidden_error"}}`)
+	}))
+	defer ts.Close()
+
+	vc, err := NewVesselClient("test-key", WithVesselBaseURL(ts.URL))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = vc.Emissions.List(context.Background(), &GetEmissionsParams{})
+	if err == nil {
+		t.Fatal("expected error for 403 response")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *APIError, got %T", err)
+	}
+	if !apiErr.IsForbidden() {
+		t.Errorf("expected IsForbidden() to return true, got status %d", apiErr.StatusCode)
+	}
+	if apiErr.IsPaymentRequired() {
+		t.Error("expected IsPaymentRequired() to return false for 403")
+	}
+	if apiErr.Code != ErrorCodeFeatureNotAvailable {
+		t.Errorf("expected code %q, got %q", ErrorCodeFeatureNotAvailable, apiErr.Code)
+	}
+	if apiErr.Type != ErrorTypeForbidden {
+		t.Errorf("expected type %q, got %q", ErrorTypeForbidden, apiErr.Type)
+	}
+	if attempts.Load() != 1 {
+		t.Errorf("expected 1 attempt (403 is not retryable), got %d", attempts.Load())
 	}
 }
 
