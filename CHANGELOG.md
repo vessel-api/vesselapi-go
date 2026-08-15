@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this module are documented here.
+Notable changes in this release. Earlier versions predate this file.
 This project follows [Semantic Versioning](https://semver.org/).
 
 ## [4.0.0] - 2026-08-15
@@ -8,6 +8,46 @@ This project follows [Semantic Versioning](https://semver.org/).
 Vessel ownership, classification and inspection data, and NAVTEX messages, were
 retired from the VesselAPI service on **10 August 2026**. This release removes
 the corresponding client surface and brings the module back in line with the API.
+
+### Security
+
+**Every release before 4.0.0 attaches the API key to redirects that leave the
+configured origin.** The key is set inside the HTTP round-tripper, so it is
+applied again to each redirected request. Go's own protection, which drops
+sensitive headers when a redirect changes host, covers only headers set on the
+original request and so does not apply here. A redirect to another host arrives
+carrying a valid bearer token.
+
+| Module path | Affected |
+|---|---|
+| `github.com/vessel-api/vesselapi-go` | 1.0.0, 2.0.0 |
+| `github.com/vessel-api/vesselapi-go/v3` | 3.0.0, 3.1.0 |
+
+2.0.0 was tagged without the `/v2` path suffix, so it resolves under the base
+path rather than `/v2`.
+
+Fixed in 4.0.0, which refuses any redirect leaving the configured origin,
+including a downgrade from https to http on the same host. A redirect policy you
+supply yourself now runs after that check rather than replacing it.
+
+**If you cannot upgrade yet**, supply a client that refuses off-origin hops. This
+works on 1.x, 2.x and 3.x:
+
+```go
+guard := &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Host != via[0].URL.Host {
+			return fmt.Errorf("refusing off-host redirect")
+		}
+		return nil
+	},
+}
+client, err := vesselapi.NewVesselClient(apiKey, vesselapi.WithVesselHTTPClient(guard))
+```
+
+Rotate the key if you have reason to think it reached a third party. Report
+security issues to security@vesselapi.com rather than a public issue; see
+[SECURITY.md](SECURITY.md).
 
 ### Import path
 
@@ -42,9 +82,11 @@ the removed endpoints.
 **Migrating from v3:** update the import path to `/v4`, then remove calls to the
 methods above. There is no alternative source for that data through this API.
 
-Three further changes break at compile time, so the compiler will find them for
-you: the six search filters listed under Changed now take a slice, `Ports.Inbound`
-takes a different params type, and `ResolutionMeta` is now `TypesResolutionMeta`.
+Beyond the removals, several signature and type changes break at compile time.
+They are listed under Changed (breaking) below, and the compiler will point at
+each one. The two most likely to affect an existing application are the location
+coordinate params, which are now plain `float64` rather than `*float64` and so
+touch every geo call site, and the seven search filters that now take slices.
 
 ### Requirements
 
@@ -57,7 +99,8 @@ takes a different params type, and `ResolutionMeta` is now `TypesResolutionMeta`
   `FilterEni`.
 - **`FilterSat`** on `Vessels.Position()`. ⚠️ Satellite lookups draw on a
   prepaid balance and are charged per call. Omit it to serve stored positions.
-- **`TimeFrom` / `TimeTo`** on the port-event methods.
+- **`TimeFrom` / `TimeTo`** on `PortEvents.ByPort()`, `ByPorts()` and
+  `ByVessels()`. `List()` and `ByVessel()` already had them.
 - **Vessel fields**: `Eni`, `Teu`, `VesselSubtype`, `NameAis`, `SummerDraught`,
   `DraughtCalculatedAvg`, `DraughtObservedMax`, `SpeedCalculatedAvg`,
   `SpeedObservedMax`.
@@ -70,10 +113,11 @@ takes a different params type, and `ResolutionMeta` is now `TypesResolutionMeta`
 
 ### Changed (breaking)
 
-- **Required parameters are now checked before the request is sent.** A
-  zero-valued params struct used to compile and then query a zero-area bounding
-  box. Those calls now return a `*ParamError` without sending anything. Match
-  any of them with `errors.Is(err, vesselapi.ErrInvalidParams)`.
+- **Required parameters are now checked before the request is sent.** Because
+  the coordinate fields stopped being pointers, a zero-valued params struct now
+  compiles and would send explicit zeros where v3 sent nothing at all. Those
+  calls return a `*ParamError` without sending anything. Match any of them with
+  `errors.Is(err, vesselapi.ErrInvalidParams)`.
   - `Location.*BoundingBox()`: all four edges.
   - `Location.*Radius()`: the centre point, and a radius greater than zero.
   - `Search.DGPS()`, `Search.LightAids()`, `Search.MODUs()`,
@@ -89,11 +133,29 @@ takes a different params type, and `ResolutionMeta` is now `TypesResolutionMeta`
   `*GetPortUnlocodeInboundParams`, matching every other method. `EtaFrom` and
   `EtaTo` become `FilterEtaFrom` and `FilterEtaTo`, and are now optional
   pointers: omit them and the service covers now to 72 hours ahead.
-- **Six search filters became slices.** `FilterFlag` and `FilterVesselType` on
-  `Search.Vessels()`, and `FilterCountry`, `FilterSize`, `FilterHarborSize` and
-  `FilterType` on `Search.Ports()`, changed from `*string` to `*[]string`, so a
-  filter can match any of several values. Existing call sites need the value
-  wrapped in a slice. `FilterCountry` on the port-event methods is unchanged.
+- **Coordinates on the twelve location methods are no longer pointers.**
+  `FilterLonLeft`, `FilterLonRight`, `FilterLatBottom`, `FilterLatTop`,
+  `FilterLatitude`, `FilterLongitude` and `FilterRadius` changed from `*float64`
+  to `float64` across every `Location.*BoundingBox()` and `Location.*Radius()`
+  params type. Pass the value directly instead of a pointer. This is why those
+  methods now validate: an unset field is no longer distinguishable from a
+  deliberate zero, so a forgotten edge would otherwise be sent as 0.
+- **`FilterEventType` on the port-event methods** is now
+  `*GetPorteventsParamsFilterEventType` rather than `*string`.
+- **`FeatureNumber` on `DGPSStation` and `RadioBeacon`** changed from `*int` to
+  `*float64`.
+- **Six generated types were renamed**, dropping or gaining a package prefix:
+  `ResolutionMeta` to `TypesResolutionMeta`, `PortCountry` to
+  `ContractsPortCountry`, `VesselFormerName` to `ContractsVesselFormerName`, and
+  `GeoJSON`, `PortReference` and `VesselReference` lost theirs.
+- **Seven search filters became slices**, so a filter can match any of several
+  values. Existing call sites need the value wrapped in a slice.
+  - `Search.Vessels()`: `FilterFlag`, `FilterVesselType`, `*string` to `*[]string`.
+  - `Search.Ports()`: `FilterCountry`, `FilterSize`, `FilterHarborSize`,
+    `FilterHarborUse`, `*string` to `*[]string`.
+  - `Search.Ports()`: `FilterType`, `*string` to
+    `*[]GetSearchPortsParamsFilterType`, a named type rather than a plain string.
+  - `FilterCountry` on the port-event methods is unchanged.
 - Coordinates are range-checked (latitude within -90 to 90, longitude within
   -180 to 180). NaN and infinities are rejected, as are an inverted latitude
   pair and a box of zero width or height. A box crossing the antimeridian is
@@ -111,8 +173,8 @@ takes a different params type, and `ResolutionMeta` is now `TypesResolutionMeta`
   carried a token, dropping every later page with no error. They now continue
   until the service stops issuing a token, and stop if it ever repeats one.
 - **The API key was reattached to redirects that left the configured origin.**
-  A redirect to another host, or a downgrade from https to http on the same
-  host, is now refused rather than followed with a valid token attached.
+  See Security above for affected versions and a workaround for anyone still on
+  1.x, 2.x or 3.x.
 - **Auto-pagination could mix results from different moments.** Nine endpoints
   resolve their time window server-side relative to each request, so every page
   of a walk covered a slightly different span. On the vessel bounding box and

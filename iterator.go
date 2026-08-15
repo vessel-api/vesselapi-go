@@ -186,17 +186,25 @@ func pinTimeWindow(from, to **string, lookback time.Duration) {
 // endpoint whose ETA filter defaults to now through a fixed horizon.
 func pinForwardWindow(from, to **string, ahead time.Duration) {
 	if *from == nil {
-		// Anchor on a caller-supplied end if there is one, so supplying only the
-		// far bound cannot produce a window running backwards.
+		now := time.Now().UTC()
+		// The documented default for the start of a forward window is now, and
+		// pinning has to reproduce that: a caller asking for arrivals in the next
+		// six hours must not also be handed the previous seventy-two. Measuring
+		// back from the caller's end only makes sense when that end is already
+		// past, where a window starting now would be empty.
 		if *to != nil {
-			if end, err := time.Parse(time.RFC3339, **to); err == nil {
+			if end, err := time.Parse(time.RFC3339, **to); err == nil && end.Before(now) {
 				s := end.Add(-ahead).UTC().Format(time.RFC3339)
 				*from = &s
+			} else if err != nil {
 				return
+			} else {
+				s := now.Format(time.RFC3339)
+				*from = &s
 			}
 			return
 		}
-		s := time.Now().UTC().Format(time.RFC3339)
+		s := now.Format(time.RFC3339)
 		*from = &s
 	}
 	if *to == nil {
