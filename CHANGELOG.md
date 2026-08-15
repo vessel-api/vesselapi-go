@@ -11,33 +11,33 @@ the corresponding client surface and brings the module back in line with the API
 
 ### Security
 
-**Every release before 4.0.0 attaches the API key to redirects that leave the
-configured origin.** The key is set inside the HTTP round-tripper, so it is
-applied again to each redirected request. Go's own protection, which drops
-sensitive headers when a redirect changes host, covers only headers set on the
-original request and so does not apply here. A redirect to another host arrives
-carrying a valid bearer token.
+Releases before 4.0.0 attach the API key inside an HTTP round-tripper, so it is
+applied again to each request made while following a redirect. Go's own
+protection, which drops sensitive headers when a redirect changes host, covers
+only headers set on the original request, so it does not apply here. A redirect
+to another host therefore arrives carrying a valid key.
 
 | Module path | Affected |
 |---|---|
-| `github.com/vessel-api/vesselapi-go` | 1.0.0, 2.0.0 |
+| `github.com/vessel-api/vesselapi-go` | 1.0.0, and 2.0.0 if vendored |
 | `github.com/vessel-api/vesselapi-go/v3` | 3.0.0, 3.1.0 |
 
-2.0.0 was tagged without the `/v2` path suffix, so it resolves under the base
-path rather than `/v2`.
+2.0.0 cannot be resolved by `go get` at any path, so it is only reachable by
+vendoring or a `replace` directive.
 
-Fixed in 4.0.0, which refuses any redirect leaving the configured origin,
-including a downgrade from https to http on the same host. A redirect policy you
-supply yourself now runs after that check rather than replacing it.
+4.0.0 refuses any redirect leaving the configured origin, including a downgrade
+from https to http on the same host. A redirect policy you supply yourself now
+runs after that check rather than replacing it, so a permissive policy no longer
+disables it.
 
-**If you cannot upgrade yet**, supply a client that refuses off-origin hops. This
+If you cannot upgrade yet, pass a client that refuses off-origin redirects. This
 works on 1.x, 2.x and 3.x:
 
 ```go
 guard := &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if req.URL.Host != via[0].URL.Host {
-			return fmt.Errorf("refusing off-host redirect")
+		if req.URL.Scheme != via[0].URL.Scheme || req.URL.Host != via[0].URL.Host {
+			return fmt.Errorf("refusing off-origin redirect")
 		}
 		return nil
 	},
@@ -45,9 +45,10 @@ guard := &http.Client{
 client, err := vesselapi.NewVesselClient(apiKey, vesselapi.WithVesselHTTPClient(guard))
 ```
 
-Rotate the key if you have reason to think it reached a third party. Report
-security issues to security@vesselapi.com rather than a public issue; see
-[SECURITY.md](SECURITY.md).
+The disclosure is silent: the call returns no error, so logs will not show it.
+Rotate the key if your deployment could have followed a redirect off your
+configured host. Report security issues to security@vesselapi.com rather than a
+public issue; see [SECURITY.md](SECURITY.md).
 
 ### Import path
 
@@ -95,7 +96,7 @@ touch every geo call site, and the seven search filters that now take slices.
 
 ### Added
 
-- **Search**: `Q` (free-text across name, IMO, MMSI and callsign) and
+- **Search**: `Q` (free-text across name, IMO, MMSI, ENI and callsign) and
   `FilterEni`.
 - **`FilterSat`** on `Vessels.Position()`. ⚠️ Satellite lookups draw on a
   prepaid balance and are charged per call. Omit it to serve stored positions.
@@ -135,19 +136,20 @@ touch every geo call site, and the seven search filters that now take slices.
   pointers: omit them and the service covers now to 72 hours ahead.
 - **Coordinates on the twelve location methods are no longer pointers.**
   `FilterLonLeft`, `FilterLonRight`, `FilterLatBottom`, `FilterLatTop`,
-  `FilterLatitude`, `FilterLongitude` and `FilterRadius` changed from `*float64`
-  to `float64` across every `Location.*BoundingBox()` and `Location.*Radius()`
-  params type. Pass the value directly instead of a pointer. This is why those
+  `FilterLatitude` and `FilterLongitude` changed from `*float64` to `float64`
+  across every `Location.*BoundingBox()` and `Location.*Radius()` params type.
+  `FilterRadius` was already a plain `float64`. Pass the value directly instead of a pointer. This is why those
   methods now validate: an unset field is no longer distinguishable from a
   deliberate zero, so a forgotten edge would otherwise be sent as 0.
-- **`FilterEventType` on the port-event methods** is now
-  `*GetPorteventsParamsFilterEventType` rather than `*string`.
+- **`FilterEventType` on `PortEvents.List()`** is now
+  `*GetPorteventsParamsFilterEventType` rather than `*string`. `ByVessel()`
+  already used a named type.
 - **`FeatureNumber` on `DGPSStation` and `RadioBeacon`** changed from `*int` to
   `*float64`.
-- **Six generated types were renamed**, dropping or gaining a package prefix:
-  `ResolutionMeta` to `TypesResolutionMeta`, `PortCountry` to
-  `ContractsPortCountry`, `VesselFormerName` to `ContractsVesselFormerName`, and
-  `GeoJSON`, `PortReference` and `VesselReference` lost theirs.
+- **Six generated types were renamed**, all of them shorter than before:
+  `TypesResolutionMeta`, `ContractsPortCountry`, `ContractsVesselFormerName`,
+  `GeoJSON`, `PortReference` and `VesselReference`. Each previously carried a
+  long `GithubComVesselapiCommonVesselDataContracts…` prefix.
 - **Seven search filters became slices**, so a filter can match any of several
   values. Existing call sites need the value wrapped in a slice.
   - `Search.Vessels()`: `FilterFlag`, `FilterVesselType`, `*string` to `*[]string`.
@@ -188,8 +190,9 @@ touch every geo call site, and the seven search filters that now take slices.
 - Retry backoff could overflow to a negative duration at high retry counts,
   which made the timer fire at once and turned backoff into a tight loop.
 - **29 numeric fields were `float32` and are now `float64`**, among them `Sog`,
-  `Cog`, `Draught`, the port depth figures and every emissions figure. Latitude
-  and longitude were always `float64` and are unaffected.
+  `Cog`, `Draught`, the port depth figures and every emissions figure, plus
+  `GeoJSON.Coordinates` from `*[]float32` to `*[]float64`. Latitude and
+  longitude were always `float64` and are unaffected.
 - The `Version` constant reported `1.0.0` across v2 and v3, so the User-Agent
   misreported the installed version.
 

@@ -125,6 +125,16 @@ func validateRadius(longitude, latitude, radius float64) error {
 			Reason: fmt.Sprintf("is required and must be greater than zero, got %g", radius),
 		}
 	}
+	// A centre of exactly 0,0 is the signature of a forgotten field rather than
+	// a real query: it is a point in the Gulf of Guinea, and a caller who wants
+	// it can nudge one coordinate. Without this, omitting the centre searches
+	// there silently, which is the failure this validation exists to prevent.
+	if longitude == 0 && latitude == 0 {
+		return &ParamError{
+			Param:  "filter.longitude, filter.latitude",
+			Reason: "are required, and both are zero; set the centre point",
+		}
+	}
 	if err := checkLongitude("filter.longitude", longitude); err != nil {
 		return err
 	}

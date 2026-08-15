@@ -339,3 +339,38 @@ func TestDegenerateBoundingBoxRejected(t *testing.T) {
 		t.Errorf("zero-height box: got %v, want ErrInvalidParams", err)
 	}
 }
+
+// TestRadiusCentreRequired covers forgetting the centre point, which leaves it
+// at 0,0 and would otherwise search the Gulf of Guinea without complaint.
+func TestRadiusCentreRequired(t *testing.T) {
+	vc := noRequestClient(t)
+	ctx := context.Background()
+
+	if _, err := vc.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
+		FilterRadius: 10000, // centre forgotten
+	}); !errors.Is(err, ErrInvalidParams) {
+		t.Errorf("missing centre: got %v, want ErrInvalidParams", err)
+	}
+
+	// A centre on one axis only is still a real place, so it must reach the
+	// wire. That needs a server, since noRequestClient fails on any request.
+	var reached bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = true
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(VesselsWithinLocationResponse{Vessels: &[]VesselPosition{}})
+	}))
+	defer ts.Close()
+	sender, err := NewVesselClient("test-key", WithVesselBaseURL(ts.URL))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := sender.Location.VesselsRadius(ctx, &GetLocationVesselsRadiusParams{
+		FilterLatitude: 51.9, FilterRadius: 10000,
+	}); err != nil {
+		t.Errorf("latitude-only centre was rejected: %v", err)
+	}
+	if !reached {
+		t.Error("a valid latitude-only centre never reached the wire")
+	}
+}
