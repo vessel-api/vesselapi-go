@@ -44,9 +44,13 @@ func (e *ParamError) Is(target error) bool { return target == ErrInvalidParams }
 // at compile time through a positional argument, and taking four bare float64
 // coordinates positionally would make a silent lat/lon ordering mistake easy.
 
-// requireString rejects an empty value for a required string parameter. A value
-// of nothing but whitespace is empty for this purpose: the service rejects it,
-// and it is what an unfilled form field arrives as.
+// requireString rejects an empty value for a required string parameter.
+//
+// A value of nothing but whitespace is empty for this purpose. The service does
+// not reject it: on all but one of these parameters it answers 200 with an
+// empty list, so an unfilled form field arrives looking exactly like a search
+// that legitimately found nothing. Naming the parameter here is the difference
+// between a caller finding the bug and shipping it.
 func requireString(param, value string) error {
 	if strings.TrimSpace(value) == "" {
 		return &ParamError{Param: param, Reason: "is required"}
@@ -99,7 +103,10 @@ func checkLongitude(param string, v float64) error {
 // The service requires lonRight greater than lonLeft and latTop greater than
 // latBottom, and rejects anything else with HTTP 400. It has no antimeridian
 // handling: a box crossing 180° has to be issued as two requests, one either
-// side. Both inversions are therefore caught here rather than sent.
+// side, each within the service's four degree span limit. Both inversions are
+// caught here rather than sent. The span limit is not checked: it is a service
+// limit on an otherwise well formed box, not a malformed request, and it is the
+// kind of ceiling that moves.
 func validateBoundingBox(lonLeft, lonRight, latBottom, latTop float64) error {
 	if lonLeft == 0 && lonRight == 0 && latBottom == 0 && latTop == 0 {
 		return &ParamError{

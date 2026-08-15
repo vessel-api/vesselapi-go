@@ -162,23 +162,22 @@ func (it *Iterator[T]) Collect() ([]T, error) {
 //
 // lookback is the endpoint's own documented default, so pinning reproduces the
 // behaviour a caller already expects rather than narrowing it.
+//
+// Both ends resolve against the current moment, as the service documents them.
+// Neither is derived from the value the caller supplied for the other: deriving
+// the start from a caller-supplied end put the whole window in the future
+// whenever that end was further ahead than the lookback, so an iterator asked
+// for events up to the end of today returned nothing at all while the one-shot
+// call returned a full page.
 func pinTimeWindow(from, to **string, lookback time.Duration) {
-	if *to == nil {
-		s := time.Now().UTC().Format(time.RFC3339)
-		*to = &s
-	}
+	now := time.Now().UTC()
 	if *from == nil {
-		// Derive the start from the resolved end, not from now. A caller asking
-		// for a historical slice supplies only TimeTo, and measuring back from
-		// now would hand the service a window running backwards.
-		end, err := time.Parse(time.RFC3339, **to)
-		if err != nil {
-			// Caller-supplied value in some other shape: leave it alone and let
-			// the service judge it rather than invent a start.
-			return
-		}
-		s := end.Add(-lookback).UTC().Format(time.RFC3339)
+		s := now.Add(-lookback).Format(time.RFC3339)
 		*from = &s
+	}
+	if *to == nil {
+		s := now.Format(time.RFC3339)
+		*to = &s
 	}
 }
 
@@ -192,16 +191,37 @@ func pinTimeWindow(from, to **string, lookback time.Duration) {
 // iterator that reasoned about the caller's intent here would return a
 // different result set than the equivalent one-shot call, which is the one
 // thing pinning must not do.
+//
+// The exception is a default that would invert the window. Unlike the time
+// bounds, this endpoint accepts a lone ETA bound that already puts the window
+// in the past and answers with an empty page, but rejects the same window with
+// HTTP 400 once both ends are named. Supplying the default in that case would
+// turn an empty result into an error, so it is left for the service to resolve.
 func pinForwardWindow(from, to **string, ahead time.Duration) {
 	now := time.Now().UTC()
 	if *from == nil {
-		s := now.Format(time.RFC3339)
-		*from = &s
+		if end, ok := parseOptionalTime(*to); !ok || !end.Before(now) {
+			s := now.Format(time.RFC3339)
+			*from = &s
+		}
 	}
 	if *to == nil {
-		s := now.Add(ahead).Format(time.RFC3339)
-		*to = &s
+		if start, ok := parseOptionalTime(*from); !ok || !start.After(now.Add(ahead)) {
+			s := now.Add(ahead).Format(time.RFC3339)
+			*to = &s
+		}
 	}
+}
+
+// parseOptionalTime reads an optional RFC3339 value, reporting whether one was
+// present and well formed. A value in any other shape is left for the service
+// to judge rather than second-guessed here.
+func parseOptionalTime(p *string) (time.Time, bool) {
+	if p == nil {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, *p)
+	return t, err == nil
 }
 
 // derefSlice safely dereferences a pointer to a slice.

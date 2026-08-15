@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -242,12 +243,14 @@ func TestValidParamsStillReachTheWire(t *testing.T) {
 		t.Fatalf("antimeridian box: got %v, want ErrInvalidParams", err)
 	}
 	// Either side of 180° separately is a normal box and must still be sent.
+	// The service caps the total span at four degrees, which is its own limit
+	// and not checked here, so this box stays inside it.
 	if _, err := vc.Location.VesselsBoundingBox(context.Background(), &GetLocationVesselsBoundingBoxParams{
-		FilterLonLeft: 170, FilterLonRight: 180, FilterLatBottom: -10, FilterLatTop: 10,
+		FilterLonLeft: 178, FilterLonRight: 180, FilterLatBottom: -1, FilterLatTop: 1,
 	}); err != nil {
 		t.Fatalf("box up to the antimeridian was rejected: %v", err)
 	}
-	for _, want := range []string{"filter.lonLeft=170", "filter.lonRight=180"} {
+	for _, want := range []string{"filter.lonLeft=178", "filter.lonRight=180"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("query %q missing %q", got, want)
 		}
@@ -458,5 +461,42 @@ func TestPathParam_NoRequestIsSent(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// A required string of nothing but whitespace is empty for validation purposes.
+// The service accepts it and answers 200 with an empty list on all but
+// filter.ids, so without this an unfilled form field is indistinguishable from
+// a search that legitimately found nothing.
+func TestRequireString_RejectsWhitespaceOnly(t *testing.T) {
+	for _, v := range []string{"", " ", "\t", "\n", "   \t\n "} {
+		if err := requireString("filter.name", v); !errors.Is(err, ErrInvalidParams) {
+			t.Errorf("requireString(%q) = %v, want ErrInvalidParams", v, err)
+		}
+	}
+	for _, v := range []string{"MAERSK", "New York", " leading", "trailing "} {
+		if err := requireString("filter.name", v); err != nil {
+			t.Errorf("requireString(%q) = %v, want nil", v, err)
+		}
+	}
+}
+
+// ParamError.Error is what a caller actually sees printed, so pin its shape.
+func TestParamError_Message(t *testing.T) {
+	err := &ParamError{Param: "filter.latTop", Reason: "must be between -90 and 90, got 91"}
+	const want = "vesselapi: filter.latTop must be between -90 and 90, got 91"
+	if got := err.Error(); got != want {
+		t.Errorf("Error() = %q, want %q", got, want)
+	}
+	if !errors.Is(err, ErrInvalidParams) {
+		t.Error("a ParamError must match ErrInvalidParams")
+	}
+	// The wrapped form a caller gets back from a method must stay readable.
+	wrapped := fmt.Errorf("looking up berths: %w", err)
+	if !strings.Contains(wrapped.Error(), want) {
+		t.Errorf("wrapped message %q lost the detail", wrapped.Error())
+	}
+	if !errors.Is(wrapped, ErrInvalidParams) {
+		t.Error("wrapping must not break errors.Is")
 	}
 }

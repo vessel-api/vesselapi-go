@@ -106,12 +106,20 @@ func main() {
 	}
 
 	// Get the vessel's latest AIS position.
+	//
+	// A vessel that exists may still have no stored position, which comes back
+	// as 404 rather than an empty result. Treat it as an outcome, not a failure:
+	// whether any given vessel is currently reporting changes from day to day.
 	fmt.Println("\n--- Vessel Position ---")
 	pos, err := client.Vessels.Position(ctx, "9811000", nil)
-	if err != nil {
+	var posErr *vesselapi.APIError
+	switch {
+	case errors.As(err, &posErr) && posErr.IsNotFound():
+		fmt.Println("No position currently stored for this vessel.")
+	case err != nil:
 		log.Fatalf("get vessel position: %v", err)
 	}
-	if pos.VesselPosition != nil {
+	if err == nil && pos.VesselPosition != nil {
 		fmt.Printf("Position: %f, %f\n",
 			vesselapi.Deref(pos.VesselPosition.Latitude),
 			vesselapi.Deref(pos.VesselPosition.Longitude),

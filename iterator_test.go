@@ -564,29 +564,35 @@ func TestPinForwardWindow(t *testing.T) {
 		}
 	})
 
-	t.Run("FutureStart_EndStillAnchoredOnNow", func(t *testing.T) {
-		from := ptr(time.Now().UTC().Add(120 * time.Hour).Format(time.RFC3339))
+	// A start beyond the horizon is the one case where the default is not
+	// supplied. The service answers a lone start beyond the horizon with an
+	// empty page, but rejects the pair with HTTP 400 once the end is named too,
+	// so filling it in would turn an empty result into an error.
+	t.Run("StartBeyondHorizon_EndLeftToTheService", func(t *testing.T) {
+		start := time.Now().UTC().Add(120 * time.Hour).Format(time.RFC3339)
+		from := ptr(start)
 		var to *string
 		pinForwardWindow(&from, &to, ahead)
-		if d := time.Until(parse(t, *to)); d < ahead-2*time.Second || d > ahead+2*time.Second {
-			t.Errorf("end is %v from now, want %v: the service anchors on now even "+
-				"when that yields an empty window, and the iterator must agree", d, ahead)
+		if to != nil {
+			t.Errorf("end was pinned to %q, inverting the window; want it left unset", *to)
+		}
+		if *from != start {
+			t.Errorf("caller's start was rewritten to %q, want %q", *from, start)
 		}
 	})
 
-	// A caller-supplied end in the past is left exactly as given. The service
-	// resolves the start to now and returns nothing; inventing a start here
-	// would make the iterator return rows the one-shot call does not.
-	t.Run("PastEnd_StartIsNowNotDerived", func(t *testing.T) {
+	// The mirror: a caller-supplied end already in the past must not have a
+	// start filled in either, for the same reason.
+	t.Run("EndInThePast_StartLeftToTheService", func(t *testing.T) {
 		var from *string
-		end := time.Now().UTC().Add(-3 * 24 * time.Hour).Format(time.RFC3339)
+		end := time.Now().UTC().Add(-48 * time.Hour).Format(time.RFC3339)
 		to := ptr(end)
 		pinForwardWindow(&from, &to, ahead)
+		if from != nil {
+			t.Errorf("start was pinned to %q, inverting the window; want it left unset", *from)
+		}
 		if *to != end {
 			t.Errorf("caller's end was rewritten to %q, want %q", *to, end)
-		}
-		if start := parse(t, *from); !start.After(parse(t, end)) {
-			t.Errorf("start %v was derived from the caller's end; want now", start)
 		}
 	})
 
@@ -665,6 +671,147 @@ func TestInboundAll_WindowMatchesOneShotAndIsStable(t *testing.T) {
 			"every currently inbound vessel would be dropped", end)
 	}
 	if params.FilterEtaTo != nil {
+		t.Error("the caller's params struct was modified")
+	}
+}
+
+// The mirror of TestPinForwardWindow. An earlier implementation derived the
+// start from the caller's end, so a caller asking for events up to the end of
+// today got a window running from two hours before that end — entirely in the
+// future — and the walk returned nothing while the one-shot returned a page.
+func TestPinTimeWindow(t *testing.T) {
+	const lookback = 2 * time.Hour
+	ptr := func(s string) *string { return &s }
+	parse := func(t *testing.T, s string) time.Time {
+		t.Helper()
+		v, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			t.Fatalf("pinned value %q is not RFC3339: %v", s, err)
+		}
+		return v
+	}
+
+	t.Run("BothNil_IsLookbackThroughNow", func(t *testing.T) {
+		var from, to *string
+		before := time.Now().UTC()
+		pinTimeWindow(&from, &to, lookback)
+		if from == nil || to == nil {
+			t.Fatalf("expected both ends pinned, got from=%v to=%v", from, to)
+		}
+		f, e := parse(t, *from), parse(t, *to)
+		if e.Before(before.Truncate(time.Second)) {
+			t.Errorf("end %v is before now", e)
+		}
+		if d := e.Sub(f); d < lookback-2*time.Second || d > lookback+2*time.Second {
+			t.Errorf("window is %v wide, want %v", d, lookback)
+		}
+	})
+
+	// The regression. A future end must not drag the start forward with it.
+	t.Run("FutureEnd_StartStaysBehindNow", func(t *testing.T) {
+		var from *string
+		to := ptr(time.Now().UTC().Add(24 * time.Hour).Format(time.RFC3339))
+		pinTimeWindow(&from, &to, lookback)
+		if from == nil {
+			t.Fatal("expected the start to be pinned")
+		}
+		start := parse(t, *from)
+		if start.After(time.Now().UTC()) {
+			t.Fatalf("start %v is in the future; the whole window would be too and the walk would return nothing", start)
+		}
+		if d := time.Since(start); d < lookback-2*time.Second || d > lookback+2*time.Second {
+			t.Errorf("start is %v back from now, want %v", d, lookback)
+		}
+	})
+
+	t.Run("PastEnd_StartIsStillMeasuredFromNow", func(t *testing.T) {
+		var from *string
+		end := time.Now().UTC().Add(-48 * time.Hour).Format(time.RFC3339)
+		to := ptr(end)
+		pinTimeWindow(&from, &to, lookback)
+		if *to != end {
+			t.Errorf("caller's end was rewritten to %q, want %q", *to, end)
+		}
+		if start := parse(t, *from); start.Before(parse(t, end)) {
+			t.Errorf("start %v was derived from the caller's end; want now minus the lookback", start)
+		}
+	})
+
+	t.Run("BothSupplied_PassedThroughUntouched", func(t *testing.T) {
+		f, e := "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"
+		from, to := ptr(f), ptr(e)
+		pinTimeWindow(&from, &to, lookback)
+		if *from != f || *to != e {
+			t.Errorf("rewrote a fully specified window to %q..%q, want %q..%q", *from, *to, f, e)
+		}
+	})
+
+	t.Run("UnparseableEnd_LeftForTheServiceToJudge", func(t *testing.T) {
+		var from *string
+		to := ptr("not-a-timestamp")
+		pinTimeWindow(&from, &to, lookback)
+		if *to != "not-a-timestamp" {
+			t.Errorf("rewrote the caller's value to %q", *to)
+		}
+		if from == nil {
+			t.Fatal("expected the start to still be pinned")
+		}
+		parse(t, *from)
+	})
+}
+
+// A walk must cover the same window the equivalent one-shot call does, on every
+// page. Exercised through ListAll, whose two-hour lookback makes the defect
+// reachable with an ordinary "up to the end of today" request.
+func TestListAll_WindowMatchesOneShotAndIsStable(t *testing.T) {
+	var mu sync.Mutex
+	var windows [][2]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		q := r.URL.Query()
+		mu.Lock()
+		windows = append(windows, [2]string{q.Get("time.from"), q.Get("time.to")})
+		n := len(windows)
+		mu.Unlock()
+		if n < 3 {
+			tok := fmt.Sprintf("page%d", n+1)
+			json.NewEncoder(w).Encode(map[string]any{
+				"portEvents": []map[string]any{{"imo": 1}}, "nextToken": tok,
+			})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]any{"portEvents": []map[string]any{{"imo": 2}}})
+	}))
+	defer srv.Close()
+
+	client, err := NewVesselClient("k", WithVesselBaseURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewVesselClient: %v", err)
+	}
+	endOfToday := time.Now().UTC().Add(24 * time.Hour).Format(time.RFC3339)
+	params := &GetPorteventsParams{TimeTo: &endOfToday}
+
+	if _, err := client.PortEvents.ListAll(context.Background(), params).Collect(); err != nil {
+		t.Fatalf("ListAll: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(windows) < 3 {
+		t.Fatalf("expected the walk to span pages, got %d requests", len(windows))
+	}
+	for i, got := range windows {
+		if got != windows[0] {
+			t.Errorf("page %d used window %v, page 1 used %v: pages must share one window", i+1, got, windows[0])
+		}
+	}
+	start, err := time.Parse(time.RFC3339, windows[0][0])
+	if err != nil {
+		t.Fatalf("time.from %q is not RFC3339: %v", windows[0][0], err)
+	}
+	if start.After(time.Now().UTC()) {
+		t.Errorf("time.from %v is in the future for an end-of-today request; the walk would return nothing", start)
+	}
+	if params.TimeFrom != nil {
 		t.Error("the caller's params struct was modified")
 	}
 }

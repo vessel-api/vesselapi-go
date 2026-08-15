@@ -155,10 +155,11 @@ touch every geo call site, and the seven search filters that now take slices.
   already used a named type.
 - **`FeatureNumber` on `DGPSStation` and `RadioBeacon`** changed from `*int` to
   `*float64`.
-- **Six generated types were renamed**, all of them shorter than before:
-  `TypesResolutionMeta`, `ContractsPortCountry`, `ContractsVesselFormerName`,
-  `GeoJSON`, `PortReference` and `VesselReference`. Each previously carried a
-  long `GithubComVesselapiCommonVesselDataContracts…` prefix.
+- **Six generated types were renamed.** Five shed a long
+  `GithubComVesselapiCommonVesselDataContracts…` prefix and are now
+  `ContractsPortCountry`, `ContractsVesselFormerName`, `GeoJSON`,
+  `PortReference` and `VesselReference`. The sixth went the other way:
+  `ResolutionMeta` is now `TypesResolutionMeta`.
 - **Seven search filters became slices**, so a filter can match any of several
   values. Existing call sites need the value wrapped in a slice.
   - `Search.Vessels()`: `FilterFlag`, `FilterVesselType`, `*string` to `*[]string`.
@@ -171,7 +172,10 @@ touch every geo call site, and the seven search filters that now take slices.
   -180 to 180). NaN and infinities are rejected, as are a box of zero width or
   height and either edge pair given in the wrong order. The service has no
   antimeridian handling and rejects `lonLeft` greater than `lonRight`, so a box
-  crossing 180° has to be issued as two requests, one either side.
+  crossing 180° has to be issued as two requests, one either side. Note that
+  the service also caps a box at four degrees of total span
+  (`|dLat| + |dLon| ≤ 4`), which the SDK does not check because it is a service
+  limit rather than a malformed request; it surfaces as an HTTP 400.
 
 ### Fixed
 
