@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -1143,4 +1144,224 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+// The API key is attached inside the round-tripper, so Go's own protection —
+// which drops sensitive headers when a redirect crosses hosts — does not cover
+// it: that only applies to headers set on the original request. Without the
+// guard a redirect to a third party arrives carrying a valid Bearer token.
+// This is the fix the 4.0.0 advisory is about, so it is pinned here directly
+// rather than only through sameOrigin.
+func TestRedirect_KeyNeverReachesAnotherOrigin(t *testing.T) {
+	var gotAuth atomic.Value
+	gotAuth.Store("")
+	attacker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth.Store(r.Header.Get("Authorization"))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{}`))
+	}))
+	defer attacker.Close()
+
+	cases := []struct {
+		name   string
+		client func(base string) (*VesselClient, error)
+	}{
+		{"DefaultClient", func(base string) (*VesselClient, error) {
+			return NewVesselClient("SECRET", WithVesselBaseURL(base))
+		}},
+		// A caller-supplied policy runs after the guard, so a permissive one
+		// cannot switch the protection off.
+		{"PermissiveCallerPolicy", func(base string) (*VesselClient, error) {
+			hc := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return nil }}
+			return NewVesselClient("SECRET", WithVesselBaseURL(base), WithVesselHTTPClient(hc))
+		}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotAuth.Store("")
+			api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, attacker.URL+"/steal", http.StatusFound)
+			}))
+			defer api.Close()
+
+			client, err := tc.client(api.URL)
+			if err != nil {
+				t.Fatalf("NewVesselClient: %v", err)
+			}
+			_, err = client.Vessels.Get(context.Background(), "9321483", nil)
+			if err == nil {
+				t.Error("expected the off-origin redirect to be refused")
+			}
+			if h := gotAuth.Load().(string); h != "" {
+				t.Fatalf("API key disclosed to another origin: Authorization: %s", h)
+			}
+			if err != nil && !strings.Contains(err.Error(), "refusing to follow a redirect") {
+				t.Errorf("error does not explain the refusal: %v", err)
+			}
+		})
+	}
+}
+
+// A redirect that stays on the same origin is still followed, with the key
+// attached — the guard must not break ordinary use.
+func TestRedirect_SameOriginStillFollowedWithKey(t *testing.T) {
+	var hops atomic.Int32
+	var authOnFinal atomic.Value
+	authOnFinal.Store("")
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if hops.Add(1) == 1 {
+			http.Redirect(w, r, srv.URL+"/moved", http.StatusFound)
+			return
+		}
+		authOnFinal.Store(r.Header.Get("Authorization"))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"vessel":{"imo":9321483}}`))
+	}))
+	defer srv.Close()
+
+	client, err := NewVesselClient("SECRET", WithVesselBaseURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewVesselClient: %v", err)
+	}
+	if _, err := client.Vessels.Get(context.Background(), "9321483", nil); err != nil {
+		t.Fatalf("same-origin redirect should be followed: %v", err)
+	}
+	if got := authOnFinal.Load().(string); got != "Bearer SECRET" {
+		t.Errorf("Authorization after same-origin redirect = %q, want %q", got, "Bearer SECRET")
+	}
+}
+
+// A caller-supplied policy is consulted, not replaced.
+func TestRedirect_CallerPolicyStillApplies(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, srv.URL+"/moved", http.StatusFound)
+	}))
+	defer srv.Close()
+
+	sentinel := errors.New("caller says no")
+	hc := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return sentinel }}
+	client, err := NewVesselClient("SECRET", WithVesselBaseURL(srv.URL), WithVesselHTTPClient(hc))
+	if err != nil {
+		t.Fatalf("NewVesselClient: %v", err)
+	}
+	if _, err := client.Vessels.Get(context.Background(), "9321483", nil); !errors.Is(err, sentinel) {
+		t.Errorf("caller's redirect policy was not consulted, got %v", err)
+	}
+}
+
+func TestSameOrigin(t *testing.T) {
+	mustURL := func(s string) *url.URL {
+		u, err := url.Parse(s)
+		if err != nil {
+			t.Fatalf("parse %q: %v", s, err)
+		}
+		return u
+	}
+	cases := []struct {
+		a, b string
+		want bool
+		why  string
+	}{
+		{"https://api.vesselapi.com/v1", "https://api.vesselapi.com/v2", true, "same origin, different path"},
+		{"https://api.vesselapi.com", "https://API.VesselAPI.com", true, "host case is not significant"},
+		{"https://api.vesselapi.com", "https://api.vesselapi.com:443", true, "explicit default port"},
+		{"http://api.vesselapi.com", "http://api.vesselapi.com:80", true, "explicit default port"},
+		{"https://api.vesselapi.com", "http://api.vesselapi.com", false, "downgrade puts the key in clear"},
+		{"https://api.vesselapi.com", "https://api.vesselapi.com.evil.com", false, "suffix is a different host"},
+		{"https://api.vesselapi.com", "https://evil.com", false, "different host"},
+		{"https://api.vesselapi.com", "https://api.vesselapi.com:8443", false, "non-default port is a different origin"},
+		{"https://[2606:4700::1]", "https://[2606:4700::1]", true, "IPv6 literal"},
+		{"https://[2606:4700::1]", "https://[2606:4700::2]", false, "different IPv6 literal"},
+	}
+	for _, c := range cases {
+		if got := sameOrigin(mustURL(c.a), mustURL(c.b)); got != c.want {
+			t.Errorf("sameOrigin(%q, %q) = %v, want %v (%s)", c.a, c.b, got, c.want, c.why)
+		}
+	}
+}
+
+func TestRefuseOffHostRedirect_StopsRedirectChains(t *testing.T) {
+	u, _ := url.Parse("https://api.vesselapi.com/v1/vessel/1")
+	req := &http.Request{URL: u}
+	via := make([]*http.Request, 10)
+	for i := range via {
+		via[i] = req
+	}
+	if err := refuseOffHostRedirect(req, via); err == nil {
+		t.Error("expected a chain of 10 redirects to be stopped")
+	}
+	if err := refuseOffHostRedirect(req, nil); err != nil {
+		t.Errorf("first request should not be treated as a redirect: %v", err)
+	}
+}
+
+// A hostile or broken Retry-After must not shorten the wait. Multiplying the
+// header value by time.Second overflows int64 and wraps negative, which an
+// earlier clamp turned into a zero-length backoff and a tight retry loop.
+func TestCalcBackoff_RetryAfterIsClamped(t *testing.T) {
+	cases := []struct {
+		header string
+		want   time.Duration
+	}{
+		{"5", 5 * time.Second},
+		{"30", maxBackoff},
+		{"120", maxBackoff},
+		{"9223372036854775807", maxBackoff},
+		{"-1", 0},
+		{"0", 0},
+	}
+	for _, c := range cases {
+		resp := &http.Response{Header: http.Header{"Retry-After": []string{c.header}}}
+		if got := calcBackoff(0, resp); got != c.want {
+			t.Errorf("calcBackoff(Retry-After: %s) = %v, want %v", c.header, got, c.want)
+		}
+	}
+	for _, h := range []string{"9223372036854775807", "99999999999999999999", "-5"} {
+		resp := &http.Response{Header: http.Header{"Retry-After": []string{h}}}
+		if got := calcBackoff(3, resp); got < 0 || got > maxBackoff {
+			t.Errorf("calcBackoff(Retry-After: %s) = %v, outside [0, %v]", h, got, maxBackoff)
+		}
+	}
+}
+
+// The generated client appends the endpoint path to the base URL, so a query
+// string or fragment on it would be silently discarded together with the base
+// path. Reject what cannot work and normalise the rest at construction, rather
+// than failing on every call.
+func TestNewVesselClient_BaseURLValidation(t *testing.T) {
+	t.Run("Rejected", func(t *testing.T) {
+		for _, bad := range []string{"", "not a url", "ftp://api.vesselapi.com", "/v1", "api.vesselapi.com"} {
+			if _, err := NewVesselClient("k", WithVesselBaseURL(bad)); err == nil {
+				t.Errorf("NewVesselClient(base=%q) = nil error, want a rejection", bad)
+			}
+		}
+	})
+	t.Run("QueryAndFragmentDropped", func(t *testing.T) {
+		var gotPath atomic.Value
+		gotPath.Store("")
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotPath.Store(r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{}`))
+		}))
+		defer srv.Close()
+		c, err := NewVesselClient("k", WithVesselBaseURL(srv.URL+"/v1?a=b#frag"))
+		if err != nil {
+			t.Fatalf("NewVesselClient: %v", err)
+		}
+		if _, err := c.Vessels.Get(context.Background(), "9811000", nil); err != nil {
+			t.Fatalf("Vessels.Get: %v", err)
+		}
+		if got := gotPath.Load().(string); got != "/v1/vessel/9811000" {
+			t.Errorf("request path = %q, want %q: the base path was lost", got, "/v1/vessel/9811000")
+		}
+	})
+	t.Run("DefaultStillWorks", func(t *testing.T) {
+		if _, err := NewVesselClient("k"); err != nil {
+			t.Errorf("default base URL rejected: %v", err)
+		}
+	})
 }

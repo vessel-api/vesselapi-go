@@ -184,35 +184,22 @@ func pinTimeWindow(from, to **string, lookback time.Duration) {
 
 // pinForwardWindow fixes a forward-looking window, used by the port inbound
 // endpoint whose ETA filter defaults to now through a fixed horizon.
+//
+// Both ends resolve against the current moment, exactly as the service
+// documents them: the start defaults to now and the end to now plus the
+// horizon. Neither default is derived from the value the caller supplied for
+// the other end, because the service does not derive them that way either. An
+// iterator that reasoned about the caller's intent here would return a
+// different result set than the equivalent one-shot call, which is the one
+// thing pinning must not do.
 func pinForwardWindow(from, to **string, ahead time.Duration) {
+	now := time.Now().UTC()
 	if *from == nil {
-		now := time.Now().UTC()
-		// The documented default for the start of a forward window is now, and
-		// pinning has to reproduce that: a caller asking for arrivals in the next
-		// six hours must not also be handed the previous seventy-two. Measuring
-		// back from the caller's end only makes sense when that end is already
-		// past, where a window starting now would be empty.
-		if *to != nil {
-			if end, err := time.Parse(time.RFC3339, **to); err == nil && end.Before(now) {
-				s := end.Add(-ahead).UTC().Format(time.RFC3339)
-				*from = &s
-			} else if err != nil {
-				return
-			} else {
-				s := now.Format(time.RFC3339)
-				*from = &s
-			}
-			return
-		}
 		s := now.Format(time.RFC3339)
 		*from = &s
 	}
 	if *to == nil {
-		start, err := time.Parse(time.RFC3339, **from)
-		if err != nil {
-			return
-		}
-		s := start.Add(ahead).UTC().Format(time.RFC3339)
+		s := now.Add(ahead).Format(time.RFC3339)
 		*to = &s
 	}
 }

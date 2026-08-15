@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 )
 
 // ErrInvalidParams matches any error returned when a request is rejected before
@@ -43,10 +44,34 @@ func (e *ParamError) Is(target error) bool { return target == ErrInvalidParams }
 // at compile time through a positional argument, and taking four bare float64
 // coordinates positionally would make a silent lat/lon ordering mistake easy.
 
-// requireString rejects an empty value for a required string parameter.
+// requireString rejects an empty value for a required string parameter. A value
+// of nothing but whitespace is empty for this purpose: the service rejects it,
+// and it is what an unfilled form field arrives as.
 func requireString(param, value string) error {
-	if value == "" {
+	if strings.TrimSpace(value) == "" {
 		return &ParamError{Param: param, Reason: "is required"}
+	}
+	return nil
+}
+
+// requirePathParam rejects a path segment that is missing, or that would change
+// which endpoint the request reaches.
+//
+// These are interpolated into the request path rather than sent as query
+// parameters, so an empty value silently produces a different, usually
+// nonexistent route: Vessels.Get(ctx, "") requests /vessel/ and comes back as a
+// puzzling 404. Worse, url.PathEscape escapes a slash but not a dot, so ".."
+// survives into the path and resolves to the parent, sending the request to the
+// API root instead of the endpoint the caller named.
+func requirePathParam(param, value string) error {
+	if strings.TrimSpace(value) == "" {
+		return &ParamError{Param: param, Reason: "is required"}
+	}
+	if strings.ContainsAny(value, "/\\") || strings.Trim(value, ".") == "" {
+		return &ParamError{
+			Param:  param,
+			Reason: fmt.Sprintf("must be a single path segment, got %q", value),
+		}
 	}
 	return nil
 }
@@ -71,9 +96,10 @@ func checkLongitude(param string, v float64) error {
 
 // validateBoundingBox checks the four edges the API requires.
 //
-// A bounding box may legitimately cross the antimeridian, so lonLeft is allowed
-// to be greater than lonRight. Latitude does not wrap, so an inverted latitude
-// pair is always a mistake and is rejected.
+// The service requires lonRight greater than lonLeft and latTop greater than
+// latBottom, and rejects anything else with HTTP 400. It has no antimeridian
+// handling: a box crossing 180° has to be issued as two requests, one either
+// side. Both inversions are therefore caught here rather than sent.
 func validateBoundingBox(lonLeft, lonRight, latBottom, latTop float64) error {
 	if lonLeft == 0 && lonRight == 0 && latBottom == 0 && latTop == 0 {
 		return &ParamError{
@@ -114,6 +140,13 @@ func validateBoundingBox(lonLeft, lonRight, latBottom, latTop float64) error {
 			Reason: fmt.Sprintf("must not be north of filter.latTop (%g > %g)", latBottom, latTop),
 		}
 	}
+	if lonLeft > lonRight {
+		return &ParamError{
+			Param: "filter.lonLeft",
+			Reason: fmt.Sprintf("must not be east of filter.lonRight (%g > %g); "+
+				"a box crossing the antimeridian has to be issued either side of 180°", lonLeft, lonRight),
+		}
+	}
 	return nil
 }
 
@@ -131,8 +164,9 @@ func validateRadius(longitude, latitude, radius float64) error {
 	// there silently, which is the failure this validation exists to prevent.
 	if longitude == 0 && latitude == 0 {
 		return &ParamError{
-			Param:  "filter.longitude, filter.latitude",
-			Reason: "are required, and both are zero; set the centre point",
+			Param: "filter.longitude, filter.latitude",
+			Reason: "are required, and both are zero; set the centre point. " +
+				"To search at 0°,0° deliberately, offset a coordinate slightly (0.000001)",
 		}
 	}
 	if err := checkLongitude("filter.longitude", longitude); err != nil {

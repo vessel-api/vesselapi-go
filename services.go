@@ -14,6 +14,9 @@ type VesselsService struct {
 
 // Get retrieves vessel details by ID (IMO or MMSI).
 func (s *VesselsService) Get(ctx context.Context, id string, params *GetVesselIdParams) (*VesselResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetVesselIdParams{}
 	}
@@ -41,6 +44,9 @@ func (s *VesselsService) Get(ctx context.Context, id string, params *GetVesselId
 
 // Position retrieves the latest position for a vessel.
 func (s *VesselsService) Position(ctx context.Context, id string, params *GetVesselIdPositionParams) (*VesselPositionResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetVesselIdPositionParams{}
 	}
@@ -68,6 +74,9 @@ func (s *VesselsService) Position(ctx context.Context, id string, params *GetVes
 
 // Casualties retrieves marine casualty records for a vessel.
 func (s *VesselsService) Casualties(ctx context.Context, id string, params *GetVesselIdCasualtiesParams) (*MarineCasualtiesResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetVesselIdCasualtiesParams{}
 	}
@@ -95,6 +104,9 @@ func (s *VesselsService) Casualties(ctx context.Context, id string, params *GetV
 
 // Emissions retrieves emissions data for a vessel.
 func (s *VesselsService) Emissions(ctx context.Context, id string, params *GetVesselIdEmissionsParams) (*VesselEmissionsResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetVesselIdEmissionsParams{}
 	}
@@ -122,6 +134,9 @@ func (s *VesselsService) Emissions(ctx context.Context, id string, params *GetVe
 
 // ETA retrieves the estimated time of arrival for a vessel.
 func (s *VesselsService) ETA(ctx context.Context, id string, params *GetVesselIdEtaParams) (*VesselETAResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetVesselIdEtaParams{}
 	}
@@ -184,6 +199,9 @@ type PortsService struct {
 
 // Get retrieves a port by its UN/LOCODE.
 func (s *PortsService) Get(ctx context.Context, unlocode string) (*PortResponse, error) {
+	if err := requirePathParam("unlocode", unlocode); err != nil {
+		return nil, err
+	}
 	rsp, err := s.client.GetPortUnlocode(ctx, unlocode)
 	if err != nil {
 		return nil, fmt.Errorf("vesselapi: %w", err)
@@ -206,6 +224,9 @@ func (s *PortsService) Get(ctx context.Context, unlocode string) (*PortResponse,
 // The ETA window is optional. Leave FilterEtaFrom and FilterEtaTo nil and the
 // service covers now to 72 hours ahead.
 func (s *PortsService) Inbound(ctx context.Context, unlocode string, params *GetPortUnlocodeInboundParams) (*PortInboundResponse, error) {
+	if err := requirePathParam("unlocode", unlocode); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetPortUnlocodeInboundParams{}
 	}
@@ -255,6 +276,9 @@ func (s *PortEventsService) List(ctx context.Context, params *GetPorteventsParam
 
 // ByPort retrieves port events for a specific port by UNLOCODE.
 func (s *PortEventsService) ByPort(ctx context.Context, unlocode string, params *GetPorteventsPortUnlocodeParams) (*PortEventsResponse, error) {
+	if err := requirePathParam("unlocode", unlocode); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetPorteventsPortUnlocodeParams{}
 	}
@@ -302,6 +326,9 @@ func (s *PortEventsService) ByPorts(ctx context.Context, params *GetPorteventsPo
 
 // ByVessel retrieves port events for a specific vessel.
 func (s *PortEventsService) ByVessel(ctx context.Context, id string, params *GetPorteventsVesselIdParams) (*PortEventsResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetPorteventsVesselIdParams{}
 	}
@@ -329,6 +356,9 @@ func (s *PortEventsService) ByVessel(ctx context.Context, id string, params *Get
 
 // LastByVessel retrieves the last port event for a vessel.
 func (s *PortEventsService) LastByVessel(ctx context.Context, id string, params *GetPorteventsVesselIdLastParams) (*PortEventResponse, error) {
+	if err := requirePathParam("id", id); err != nil {
+		return nil, err
+	}
 	if params == nil {
 		params = &GetPorteventsVesselIdLastParams{}
 	}

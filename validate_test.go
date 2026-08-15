@@ -232,13 +232,22 @@ func TestValidParamsStillReachTheWire(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Crosses the antimeridian: lonLeft is east of lonRight, which is valid.
+	// A box crossing the antimeridian is not supported by the service, which
+	// answers 400 with "lonRight must be greater than lonLeft". Catching it here
+	// is the same failure, named, without the round trip. It has to be issued as
+	// two requests, one either side of 180°.
 	if _, err := vc.Location.VesselsBoundingBox(context.Background(), &GetLocationVesselsBoundingBoxParams{
 		FilterLonLeft: 170, FilterLonRight: -170, FilterLatBottom: -10, FilterLatTop: 10,
-	}); err != nil {
-		t.Fatalf("antimeridian bounding box was rejected: %v", err)
+	}); !errors.Is(err, ErrInvalidParams) {
+		t.Fatalf("antimeridian box: got %v, want ErrInvalidParams", err)
 	}
-	for _, want := range []string{"filter.lonLeft=170", "filter.lonRight=-170"} {
+	// Either side of 180° separately is a normal box and must still be sent.
+	if _, err := vc.Location.VesselsBoundingBox(context.Background(), &GetLocationVesselsBoundingBoxParams{
+		FilterLonLeft: 170, FilterLonRight: 180, FilterLatBottom: -10, FilterLatTop: 10,
+	}); err != nil {
+		t.Fatalf("box up to the antimeridian was rejected: %v", err)
+	}
+	for _, want := range []string{"filter.lonLeft=170", "filter.lonRight=180"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("query %q missing %q", got, want)
 		}
@@ -372,5 +381,82 @@ func TestRadiusCentreRequired(t *testing.T) {
 	}
 	if !reached {
 		t.Error("a valid latitude-only centre never reached the wire")
+	}
+}
+
+func TestRequirePathParam(t *testing.T) {
+	cases := []struct {
+		value   string
+		wantErr bool
+		why     string
+	}{
+		{"9811000", false, "an ordinary IMO"},
+		{"NLRTM", false, "an ordinary UN/LOCODE"},
+		{"", true, "empty would request /vessel/ and 404"},
+		{"   ", true, "whitespace only is empty"},
+		{"..", true, "resolves to the parent, reaching the API root"},
+		{".", true, "resolves to the same directory"},
+		{"...", true, "dots only"},
+		{"../../admin", true, "traversal"},
+		{"a/b", true, "a slash splits the segment"},
+		{`a\b`, true, "a backslash is normalised by some proxies"},
+		{"9811000 ", false, "a legitimate value with stray spacing still passes"},
+	}
+	for _, c := range cases {
+		err := requirePathParam("id", c.value)
+		if c.wantErr && err == nil {
+			t.Errorf("requirePathParam(%q) = nil, want an error (%s)", c.value, c.why)
+		}
+		if !c.wantErr && err != nil {
+			t.Errorf("requirePathParam(%q) = %v, want nil (%s)", c.value, err, c.why)
+		}
+		if c.wantErr && err != nil && !errors.Is(err, ErrInvalidParams) {
+			t.Errorf("requirePathParam(%q) does not match ErrInvalidParams", c.value)
+		}
+	}
+}
+
+// The path parameter must be rejected before anything reaches the wire, on
+// every method that interpolates one, including through the iterators.
+func TestPathParam_NoRequestIsSent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("a request was sent for an invalid path parameter: %s", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+	c, err := NewVesselClient("k", WithVesselBaseURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewVesselClient: %v", err)
+	}
+	ctx := context.Background()
+
+	oneShot := map[string]func(string) error{
+		"Vessels.Get":             func(v string) error { _, err := c.Vessels.Get(ctx, v, nil); return err },
+		"Vessels.Position":        func(v string) error { _, err := c.Vessels.Position(ctx, v, nil); return err },
+		"Vessels.Casualties":      func(v string) error { _, err := c.Vessels.Casualties(ctx, v, nil); return err },
+		"Vessels.Emissions":       func(v string) error { _, err := c.Vessels.Emissions(ctx, v, nil); return err },
+		"Vessels.ETA":             func(v string) error { _, err := c.Vessels.ETA(ctx, v, nil); return err },
+		"Ports.Get":               func(v string) error { _, err := c.Ports.Get(ctx, v); return err },
+		"Ports.Inbound":           func(v string) error { _, err := c.Ports.Inbound(ctx, v, nil); return err },
+		"PortEvents.ByPort":       func(v string) error { _, err := c.PortEvents.ByPort(ctx, v, nil); return err },
+		"PortEvents.ByVessel":     func(v string) error { _, err := c.PortEvents.ByVessel(ctx, v, nil); return err },
+		"PortEvents.LastByVessel": func(v string) error { _, err := c.PortEvents.LastByVessel(ctx, v, nil); return err },
+	}
+	iterators := map[string]func(string) error{
+		"Ports.InboundAll":       func(v string) error { _, err := c.Ports.InboundAll(ctx, v, nil).Collect(); return err },
+		"PortEvents.AllByPort":   func(v string) error { _, err := c.PortEvents.AllByPort(ctx, v, nil).Collect(); return err },
+		"PortEvents.AllByVessel": func(v string) error { _, err := c.PortEvents.AllByVessel(ctx, v, nil).Collect(); return err },
+		"Vessels.AllCasualties":  func(v string) error { _, err := c.Vessels.AllCasualties(ctx, v, nil).Collect(); return err },
+		"Vessels.AllEmissions":   func(v string) error { _, err := c.Vessels.AllEmissions(ctx, v, nil).Collect(); return err },
+	}
+	for _, group := range []map[string]func(string) error{oneShot, iterators} {
+		for name, call := range group {
+			for _, bad := range []string{"", ".."} {
+				if err := call(bad); !errors.Is(err, ErrInvalidParams) {
+					t.Errorf("%s(%q) = %v, want ErrInvalidParams", name, bad, err)
+				}
+			}
+		}
 	}
 }

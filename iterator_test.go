@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestIterator_MultiplePages(t *testing.T) {
@@ -507,5 +509,162 @@ func TestIteratorPinsTimeWindow(t *testing.T) {
 		if w != windows[0] {
 			t.Errorf("page %d used window %q, want %q", i+1, w, windows[0])
 		}
+	}
+}
+
+// Pinning must reproduce the window the service itself would resolve, so that a
+// walk and the equivalent one-shot call describe the same result set. An
+// earlier implementation derived the end of the window from the caller's start,
+// which for a start seven days back ended the window four days in the past and
+// silently dropped every currently inbound vessel.
+func TestPinForwardWindow(t *testing.T) {
+	const ahead = 72 * time.Hour
+	ptr := func(s string) *string { return &s }
+	parse := func(t *testing.T, s string) time.Time {
+		t.Helper()
+		v, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			t.Fatalf("pinned value %q is not RFC3339: %v", s, err)
+		}
+		return v
+	}
+
+	t.Run("BothNil_IsNowThroughHorizon", func(t *testing.T) {
+		var from, to *string
+		before := time.Now().UTC()
+		pinForwardWindow(&from, &to, ahead)
+		after := time.Now().UTC()
+		if from == nil || to == nil {
+			t.Fatalf("expected both ends pinned, got from=%v to=%v", from, to)
+		}
+		f, tt := parse(t, *from), parse(t, *to)
+		if f.Before(before.Truncate(time.Second)) || f.After(after) {
+			t.Errorf("start %v not pinned to now (%v..%v)", f, before, after)
+		}
+		if d := tt.Sub(f); d < ahead-2*time.Second || d > ahead+2*time.Second {
+			t.Errorf("window is %v wide, want %v", d, ahead)
+		}
+	})
+
+	// The regression. A past start must not drag the end of the window back with
+	// it: the service resolves the end against now regardless of the start.
+	t.Run("PastStart_EndStaysAheadOfNow", func(t *testing.T) {
+		from := ptr(time.Now().UTC().Add(-7 * 24 * time.Hour).Format(time.RFC3339))
+		var to *string
+		pinForwardWindow(&from, &to, ahead)
+		if to == nil {
+			t.Fatal("expected the end to be pinned")
+		}
+		end := parse(t, *to)
+		if !end.After(time.Now().UTC()) {
+			t.Fatalf("end %v is in the past; a walk would drop every current arrival", end)
+		}
+		if d := time.Until(end); d < ahead-2*time.Second || d > ahead+2*time.Second {
+			t.Errorf("end is %v from now, want %v", d, ahead)
+		}
+	})
+
+	t.Run("FutureStart_EndStillAnchoredOnNow", func(t *testing.T) {
+		from := ptr(time.Now().UTC().Add(120 * time.Hour).Format(time.RFC3339))
+		var to *string
+		pinForwardWindow(&from, &to, ahead)
+		if d := time.Until(parse(t, *to)); d < ahead-2*time.Second || d > ahead+2*time.Second {
+			t.Errorf("end is %v from now, want %v: the service anchors on now even "+
+				"when that yields an empty window, and the iterator must agree", d, ahead)
+		}
+	})
+
+	// A caller-supplied end in the past is left exactly as given. The service
+	// resolves the start to now and returns nothing; inventing a start here
+	// would make the iterator return rows the one-shot call does not.
+	t.Run("PastEnd_StartIsNowNotDerived", func(t *testing.T) {
+		var from *string
+		end := time.Now().UTC().Add(-3 * 24 * time.Hour).Format(time.RFC3339)
+		to := ptr(end)
+		pinForwardWindow(&from, &to, ahead)
+		if *to != end {
+			t.Errorf("caller's end was rewritten to %q, want %q", *to, end)
+		}
+		if start := parse(t, *from); !start.After(parse(t, end)) {
+			t.Errorf("start %v was derived from the caller's end; want now", start)
+		}
+	})
+
+	t.Run("BothSupplied_PassedThroughUntouched", func(t *testing.T) {
+		f, e := "2026-01-01T00:00:00Z", "2026-01-09T00:00:00Z"
+		from, to := ptr(f), ptr(e)
+		pinForwardWindow(&from, &to, ahead)
+		if *from != f || *to != e {
+			t.Errorf("rewrote a fully specified window to %q..%q, want %q..%q", *from, *to, f, e)
+		}
+	})
+
+	t.Run("UnparseableStart_LeftForTheServiceToJudge", func(t *testing.T) {
+		from := ptr("not-a-timestamp")
+		var to *string
+		pinForwardWindow(&from, &to, ahead)
+		if *from != "not-a-timestamp" {
+			t.Errorf("rewrote the caller's value to %q", *from)
+		}
+		if to == nil {
+			t.Fatal("expected the end to still be pinned")
+		}
+		parse(t, *to)
+	})
+}
+
+// InboundAll must send the same ETA window that Ports.Inbound resolves for the
+// same params, and the same window on every page.
+func TestInboundAll_WindowMatchesOneShotAndIsStable(t *testing.T) {
+	var mu sync.Mutex
+	var windows [][2]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		q := r.URL.Query()
+		mu.Lock()
+		windows = append(windows, [2]string{q.Get("filter.etaFrom"), q.Get("filter.etaTo")})
+		n := len(windows)
+		mu.Unlock()
+		if n < 3 {
+			tok := fmt.Sprintf("page%d", n+1)
+			json.NewEncoder(w).Encode(map[string]any{
+				"vesselETAs": []map[string]any{{"mmsi": 1}}, "nextToken": tok,
+			})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]any{"vesselETAs": []map[string]any{{"mmsi": 2}}})
+	}))
+	defer srv.Close()
+
+	client, err := NewVesselClient("k", WithVesselBaseURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewVesselClient: %v", err)
+	}
+	past := time.Now().UTC().Add(-7 * 24 * time.Hour).Format(time.RFC3339)
+	params := &GetPortUnlocodeInboundParams{FilterEtaFrom: &past}
+
+	if _, err := client.Ports.InboundAll(context.Background(), "NLRTM", params).Collect(); err != nil {
+		t.Fatalf("InboundAll: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(windows) < 3 {
+		t.Fatalf("expected the walk to span pages, got %d requests", len(windows))
+	}
+	for i, got := range windows {
+		if got != windows[0] {
+			t.Errorf("page %d used window %v, page 1 used %v: pages must share one window", i+1, got, windows[0])
+		}
+	}
+	end, err := time.Parse(time.RFC3339, windows[0][1])
+	if err != nil {
+		t.Fatalf("etaTo %q is not RFC3339: %v", windows[0][1], err)
+	}
+	if !end.After(time.Now().UTC()) {
+		t.Errorf("etaTo %v is in the past for a start seven days back; "+
+			"every currently inbound vessel would be dropped", end)
+	}
+	if params.FilterEtaTo != nil {
+		t.Error("the caller's params struct was modified")
 	}
 }

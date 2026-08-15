@@ -108,6 +108,22 @@ func NewVesselClient(apiKey string, opts ...VesselClientOption) (*VesselClient, 
 	if cfg.maxRetries < 0 {
 		cfg.maxRetries = 0
 	}
+	// Reject a base URL that cannot address the API here, rather than letting
+	// every call fail somewhere confusing. A query string or fragment is
+	// dropped: the generated client appends the endpoint path to this value, so
+	// anything after it would be silently discarded along with the base path.
+	parsedBase, err := url.Parse(cfg.baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("vesselapi: base URL %q is not a valid URL: %w", cfg.baseURL, err)
+	}
+	if parsedBase.Scheme != "http" && parsedBase.Scheme != "https" {
+		return nil, fmt.Errorf("vesselapi: base URL %q must be http or https", cfg.baseURL)
+	}
+	if parsedBase.Host == "" {
+		return nil, fmt.Errorf("vesselapi: base URL %q has no host", cfg.baseURL)
+	}
+	parsedBase.RawQuery, parsedBase.Fragment = "", ""
+	cfg.baseURL = parsedBase.String()
 
 	base := http.DefaultTransport
 	if cfg.httpClient != nil && cfg.httpClient.Transport != nil {
@@ -323,14 +339,16 @@ func calcBackoff(attempt int, resp *http.Response) time.Duration {
 	if ra := resp.Header.Get("Retry-After"); ra != "" {
 		// Try seconds format.
 		if seconds, err := strconv.Atoi(ra); err == nil {
-			d := time.Duration(seconds) * time.Second
-			if d < 0 {
-				d = 0
+			// Clamp before converting. Multiplying a large value by time.Second
+			// overflows int64 and wraps to a negative duration, which would then
+			// be clamped to zero and turn backoff into an immediate retry.
+			switch {
+			case seconds <= 0:
+				return 0
+			case seconds > int(maxBackoff/time.Second):
+				return maxBackoff
 			}
-			if d > maxBackoff {
-				d = maxBackoff
-			}
-			return d
+			return time.Duration(seconds) * time.Second
 		}
 		// Try HTTP-date format (RFC 7231 section 7.1.3).
 		if t, err := http.ParseTime(ra); err == nil {

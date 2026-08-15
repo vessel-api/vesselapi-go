@@ -54,7 +54,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(vesselapi.Deref(port.Port.Name))
+	// Every field on a response is optional, so check before dereferencing.
+	if port.Port != nil {
+		fmt.Println(vesselapi.Deref(port.Port.Name))
+	}
 
 	// Auto-paginate through port events.
 	it := client.PortEvents.ListAll(ctx, &vesselapi.GetPorteventsParams{
@@ -91,17 +94,21 @@ vessel, err := client.Vessels.Get(ctx, "9811000", nil)
 if err != nil {
 	log.Fatal(err)
 }
-fmt.Printf("%s (%s)\n", vesselapi.Deref(vessel.Vessel.Name), vesselapi.Deref(vessel.Vessel.VesselType))
+if vessel.Vessel != nil {
+	fmt.Printf("%s (%s)\n", vesselapi.Deref(vessel.Vessel.Name), vesselapi.Deref(vessel.Vessel.VesselType))
+}
 
 // Get the vessel's latest AIS position.
 pos, err := client.Vessels.Position(ctx, "9811000", nil)
 if err != nil {
 	log.Fatal(err)
 }
-fmt.Printf("Position: %f, %f\n",
-	vesselapi.Deref(pos.VesselPosition.Latitude),
-	vesselapi.Deref(pos.VesselPosition.Longitude),
-)
+if pos.VesselPosition != nil {
+	fmt.Printf("Position: %f, %f\n",
+		vesselapi.Deref(pos.VesselPosition.Latitude),
+		vesselapi.Deref(pos.VesselPosition.Longitude),
+	)
+}
 
 // Find all vessels within 10 km of Rotterdam.
 nearby, err := client.Location.VesselsRadius(ctx, &vesselapi.GetLocationVesselsRadiusParams{
@@ -123,7 +130,23 @@ for _, v := range vesselapi.Deref(nearby.Vessels) {
 
 ## Error Handling
 
-All methods return `*APIError` on non-2xx responses. Use `errors.As` to inspect:
+There are two kinds of error. A call rejected before anything is sent returns a
+`*ParamError`, and a non-2xx response returns an `*APIError`.
+
+Required parameters are checked locally, so a missing filter or an out-of-range
+coordinate fails without a round trip. Match any of them at once:
+
+```go
+if errors.Is(err, vesselapi.ErrInvalidParams) {
+	// Nothing was sent. Inspect *ParamError for the parameter at fault.
+	var paramErr *vesselapi.ParamError
+	if errors.As(err, &paramErr) {
+		fmt.Println(paramErr.Param, paramErr.Reason)
+	}
+}
+```
+
+For responses, use `errors.As` to inspect:
 
 ```go
 var apiErr *vesselapi.APIError
@@ -213,7 +236,7 @@ var first50 []vesselapi.Vessel
 tankers := client.Search.AllVessels(ctx, &vesselapi.GetSearchVesselsParams{
 	FilterVesselType: &[]string{"Tanker"},
 })
-for tankers.Next() && len(first50) < 50 {
+for len(first50) < 50 && tankers.Next() {
 	first50 = append(first50, tankers.Value())
 }
 if err := tankers.Err(); err != nil {

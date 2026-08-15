@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -848,6 +849,26 @@ func TestSmoke_Location(t *testing.T) {
 // Helper: assert an APIError with a specific status code.
 // ---------------------------------------------------------------------------
 
+// requireParamError asserts the SDK rejected the call itself, before any request
+// was sent. These cases used to reach the service and come back as HTTP 400; v4
+// catches them locally, which is why they no longer assert *APIError.
+func requireParamError(t *testing.T, err error, wantParam string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected a validation error naming %q, got nil", wantParam)
+	}
+	if !errors.Is(err, ErrInvalidParams) {
+		t.Fatalf("expected ErrInvalidParams, got %T: %v", err, err)
+	}
+	var pe *ParamError
+	if !errors.As(err, &pe) {
+		t.Fatalf("expected *ParamError, got %T: %v", err, err)
+	}
+	if wantParam != "" && !strings.Contains(pe.Param, wantParam) {
+		t.Errorf("ParamError.Param = %q, want it to name %q", pe.Param, wantParam)
+	}
+}
+
 func requireAPIError(t *testing.T, err error, wantStatus int) {
 	t.Helper()
 	if err == nil {
@@ -1072,7 +1093,7 @@ func TestSmoke_PortEvents_BadParams(t *testing.T) {
 		_, err := client.PortEvents.ByPorts(ctx, &GetPorteventsPortsParams{
 			FilterPortName: "",
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.portName")
 	})
 
 	t.Run("ByVessels_EmptyName", func(t *testing.T) {
@@ -1081,7 +1102,7 @@ func TestSmoke_PortEvents_BadParams(t *testing.T) {
 		_, err := client.PortEvents.ByVessels(ctx, &GetPorteventsVesselsParams{
 			FilterVesselName: "",
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.vesselName")
 	})
 }
 
@@ -1139,7 +1160,7 @@ func TestSmoke_Search_BadParams(t *testing.T) {
 		_, err := client.Search.DGPS(ctx, &GetSearchDgpsParams{
 			FilterName: "",
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.name")
 	})
 
 	t.Run("LightAids_EmptyName", func(t *testing.T) {
@@ -1148,7 +1169,7 @@ func TestSmoke_Search_BadParams(t *testing.T) {
 		_, err := client.Search.LightAids(ctx, &GetSearchLightaidsParams{
 			FilterName: "",
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.name")
 	})
 
 	t.Run("MODUs_EmptyName", func(t *testing.T) {
@@ -1157,7 +1178,7 @@ func TestSmoke_Search_BadParams(t *testing.T) {
 		_, err := client.Search.MODUs(ctx, &GetSearchModusParams{
 			FilterName: "",
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.name")
 	})
 
 	t.Run("RadioBeacons_EmptyName", func(t *testing.T) {
@@ -1166,7 +1187,7 @@ func TestSmoke_Search_BadParams(t *testing.T) {
 		_, err := client.Search.RadioBeacons(ctx, &GetSearchRadiobeaconsParams{
 			FilterName: "",
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.name")
 	})
 }
 
@@ -1185,7 +1206,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatitude:  91.0,
 			FilterRadius:    10000,
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.latitude")
 	})
 
 	t.Run("VesselsRadius_LongitudeTooHigh", func(t *testing.T) {
@@ -1196,7 +1217,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatitude:  51.5,
 			FilterRadius:    10000,
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.longitude")
 	})
 
 	t.Run("VesselsRadius_RadiusTooLarge", func(t *testing.T) {
@@ -1218,7 +1239,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatitude:  51.5,
 			FilterRadius:    -1,
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.radius")
 	})
 
 	t.Run("VesselsBoundingBox_InvertedLat", func(t *testing.T) {
@@ -1230,7 +1251,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatBottom: 52.0,
 			FilterLatTop:    51.0, // inverted: bottom > top
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.latBottom")
 	})
 
 	t.Run("VesselsBoundingBox_PaginationTooHigh", func(t *testing.T) {
@@ -1266,7 +1287,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatBottom: 51.0,
 			FilterLatTop:    52.0,
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.lonLeft")
 	})
 
 	t.Run("DGPSRadius_LatitudeTooLow", func(t *testing.T) {
@@ -1277,7 +1298,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatitude:  -91.0,
 			FilterRadius:    10000,
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.latitude")
 	})
 
 	t.Run("LightAidsRadius_LongitudeTooLow", func(t *testing.T) {
@@ -1288,7 +1309,7 @@ func TestSmoke_Location_BadParams(t *testing.T) {
 			FilterLatitude:  51.5,
 			FilterRadius:    10000,
 		})
-		requireAPIError(t, err, 400)
+		requireParamError(t, err, "filter.longitude")
 	})
 
 	t.Run("MODUsRadius_RadiusTooLarge", func(t *testing.T) {

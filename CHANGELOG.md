@@ -127,6 +127,15 @@ touch every geo call site, and the seven search filters that now take slices.
     `PortEvents.ByVessels()`: `filter.vesselName`.
   - `Vessels.Positions()`: `filter.ids`.
   - The `All*` iterators report the same failure through `Err()`.
+- **The vessel id and UN/LOCODE arguments are now checked too.** An empty value
+  used to be interpolated into the path and requested a route that does not
+  exist, arriving as a puzzling 404; a value of `..` resolved to the parent and
+  sent the request to the API root instead of the endpoint named. Both are now
+  a `*ParamError`, across all fifteen methods that take one.
+- **An unusable base URL is rejected by `NewVesselClient`** rather than failing
+  on every call. A query string or fragment on it is dropped, since the endpoint
+  path is appended to it and anything after would be discarded along with the
+  base path.
 - **Passing `nil` params to those 19 methods is now an error** instead of a
   request full of zero values.
 - **`Ports.Inbound()` and `Ports.InboundAll()` take a different params type.**
@@ -159,9 +168,10 @@ touch every geo call site, and the seven search filters that now take slices.
     `*[]GetSearchPortsParamsFilterType`, a named type rather than a plain string.
   - `FilterCountry` on the port-event methods is unchanged.
 - Coordinates are range-checked (latitude within -90 to 90, longitude within
-  -180 to 180). NaN and infinities are rejected, as are an inverted latitude
-  pair and a box of zero width or height. A box crossing the antimeridian is
-  still valid, so `lonLeft` may be greater than `lonRight`.
+  -180 to 180). NaN and infinities are rejected, as are a box of zero width or
+  height and either edge pair given in the wrong order. The service has no
+  antimeridian handling and rejects `lonLeft` greater than `lonRight`, so a box
+  crossing 180° has to be issued as two requests, one either side.
 
 ### Fixed
 
@@ -187,8 +197,9 @@ touch every geo call site, and the seven search filters that now take slices.
 - **An iterator stopping early now reports it.** Previously a short read looked
   identical to a complete one. `Collect` also returns the items gathered before
   a failure instead of discarding them.
-- Retry backoff could overflow to a negative duration at high retry counts,
-  which made the timer fire at once and turned backoff into a tight loop.
+- Retry backoff could overflow to a negative duration and turn into a tight
+  loop, both at high retry counts and on a large `Retry-After` value, where the
+  wrapped duration was clamped to zero and retried at once.
 - **29 numeric fields were `float32` and are now `float64`**, among them `Sog`,
   `Cog`, `Draught`, the port depth figures and every emissions figure, plus
   `GeoJSON.Coordinates` from `*[]float32` to `*[]float64`. Latitude and
