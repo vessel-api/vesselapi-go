@@ -204,6 +204,13 @@ touch every geo call site, and the seven search filters that now take slices.
 - Retry backoff could overflow to a negative duration and turn into a tight
   loop, both at high retry counts and on a large `Retry-After` value, where the
   wrapped duration was clamped to zero and retried at once.
+- **An error response whose body could not be decoded lost its status code.** A
+  declared error status arriving with an empty or malformed body while claiming
+  a JSON content type surfaced as a bare syntax error, so `errors.As` did not
+  match `*APIError` and `IsNotFound()`, `IsRateLimited()` and the rest never
+  fired. Such a response now returns an `*APIError` carrying the status. This
+  needs something between you and the service to produce it, such as a proxy or
+  rate limiter answering in its own format; the API itself does not.
 - **29 numeric fields were `float32` and are now `float64`**, among them `Sog`,
   `Cog`, `Draught`, the port depth figures and every emissions figure, plus
   `GeoJSON.Coordinates` from `*[]float32` to `*[]float64`. Latitude and

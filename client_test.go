@@ -1365,3 +1365,66 @@ func TestNewVesselClient_BaseURLValidation(t *testing.T) {
 		}
 	})
 }
+
+// A declared error status can arrive with a body the generated parser cannot
+// decode — an empty body from a rate limiter, or an HTML page from something in
+// front of the service that still claims JSON. The parser discards the body and
+// returns a syntax error, which used to lose the status entirely: errors.As did
+// not match *APIError, so IsNotFound, IsRateLimited and the rest never fired.
+func TestUndecodableErrorBodyStillCarriesStatus(t *testing.T) {
+	cases := []struct {
+		status     int
+		ctype      string
+		body       string
+		wantAPI    bool
+		wantHelper func(*APIError) bool
+	}{
+		{429, "application/json", "", true, (*APIError).IsRateLimited},
+		{429, "application/json", "rate limited", true, (*APIError).IsRateLimited},
+		{404, "application/json", "", true, (*APIError).IsNotFound},
+		{401, "application/json", "not json", true, (*APIError).IsAuthError},
+		{403, "application/json", "", true, (*APIError).IsForbidden},
+		{500, "application/json", "", true, nil},
+		{400, "application/json", "", true, nil},
+		// Already worked: undeclared status, or a content type the parser skips.
+		{503, "application/json", "", true, nil},
+		{502, "text/html", "<html>bad gateway</html>", true, nil},
+		{404, "text/plain", "Not Found", true, (*APIError).IsNotFound},
+		// A 2xx with an undecodable body is not an API error; it stays a parse error.
+		{200, "application/json", "", false, nil},
+	}
+	for _, c := range cases {
+		name := fmt.Sprintf("%d_%s_%dbytes", c.status, strings.SplitN(c.ctype, "/", 2)[1], len(c.body))
+		t.Run(name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", c.ctype)
+				w.WriteHeader(c.status)
+				fmt.Fprint(w, c.body)
+			}))
+			defer srv.Close()
+
+			client, err := NewVesselClient("k", WithVesselBaseURL(srv.URL), WithVesselRetry(0))
+			if err != nil {
+				t.Fatalf("NewVesselClient: %v", err)
+			}
+			_, err = client.Ports.Get(context.Background(), "NLRTM")
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			var apiErr *APIError
+			gotAPI := errors.As(err, &apiErr)
+			if gotAPI != c.wantAPI {
+				t.Fatalf("errors.As(*APIError) = %v, want %v (err = %v)", gotAPI, c.wantAPI, err)
+			}
+			if !c.wantAPI {
+				return
+			}
+			if apiErr.StatusCode != c.status {
+				t.Errorf("StatusCode = %d, want %d", apiErr.StatusCode, c.status)
+			}
+			if c.wantHelper != nil && !c.wantHelper(apiErr) {
+				t.Errorf("the status-specific helper did not fire for %d", c.status)
+			}
+		})
+	}
+}

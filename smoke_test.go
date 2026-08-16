@@ -48,7 +48,7 @@ func smokeCtx(t *testing.T) context.Context {
 }
 
 // ---------------------------------------------------------------------------
-// Vessels (10 subtests)
+// Vessels (6 subtests)
 // ---------------------------------------------------------------------------
 
 func TestSmoke_Vessels(t *testing.T) {
@@ -144,7 +144,7 @@ func TestSmoke_Vessels(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Ports (1 subtest)
+// Ports (2 subtests)
 // ---------------------------------------------------------------------------
 
 func TestSmoke_Ports(t *testing.T) {
@@ -233,7 +233,7 @@ func TestSmoke_Meta_Fallback(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// PortEvents (6 subtests)
+// PortEvents (9 subtests)
 // ---------------------------------------------------------------------------
 
 func TestSmoke_PortEvents(t *testing.T) {
@@ -405,7 +405,7 @@ func TestSmoke_Emissions(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Search (6 subtests)
+// Search (12 subtests)
 // ---------------------------------------------------------------------------
 
 func TestSmoke_Search(t *testing.T) {

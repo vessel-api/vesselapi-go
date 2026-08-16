@@ -31,7 +31,7 @@ func (s *VesselsService) Get(ctx context.Context, id string, params *GetVesselId
 	}
 	parsed, err := ParseGetVesselIdResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (s *VesselsService) Position(ctx context.Context, id string, params *GetVes
 	}
 	parsed, err := ParseGetVesselIdPositionResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (s *VesselsService) Casualties(ctx context.Context, id string, params *GetV
 	}
 	parsed, err := ParseGetVesselIdCasualtiesResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *VesselsService) Emissions(ctx context.Context, id string, params *GetVe
 	}
 	parsed, err := ParseGetVesselIdEmissionsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (s *VesselsService) ETA(ctx context.Context, id string, params *GetVesselId
 	}
 	parsed, err := ParseGetVesselIdEtaResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (s *VesselsService) Positions(ctx context.Context, params *GetVesselsPositi
 	}
 	parsed, err := ParseGetVesselsPositionsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -208,7 +208,7 @@ func (s *PortsService) Get(ctx context.Context, unlocode string) (*PortResponse,
 	}
 	parsed, err := ParseGetPortUnlocodeResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func (s *PortsService) Inbound(ctx context.Context, unlocode string, params *Get
 	}
 	parsed, err := ParseGetPortUnlocodeInboundResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func (s *PortEventsService) List(ctx context.Context, params *GetPorteventsParam
 	}
 	parsed, err := ParseGetPorteventsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -288,7 +288,7 @@ func (s *PortEventsService) ByPort(ctx context.Context, unlocode string, params 
 	}
 	parsed, err := ParseGetPorteventsPortUnlocodeResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -313,7 +313,7 @@ func (s *PortEventsService) ByPorts(ctx context.Context, params *GetPorteventsPo
 	}
 	parsed, err := ParseGetPorteventsPortsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -343,7 +343,7 @@ func (s *PortEventsService) ByVessel(ctx context.Context, id string, params *Get
 	}
 	parsed, err := ParseGetPorteventsVesselIdResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -373,7 +373,7 @@ func (s *PortEventsService) LastByVessel(ctx context.Context, id string, params 
 	}
 	parsed, err := ParseGetPorteventsVesselIdLastResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -398,7 +398,7 @@ func (s *PortEventsService) ByVessels(ctx context.Context, params *GetPortevents
 	}
 	parsed, err := ParseGetPorteventsVesselsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -425,7 +425,7 @@ func (s *EmissionsService) List(ctx context.Context, params *GetEmissionsParams)
 	}
 	parsed, err := ParseGetEmissionsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -452,7 +452,7 @@ func (s *SearchService) Vessels(ctx context.Context, params *GetSearchVesselsPar
 	}
 	parsed, err := ParseGetSearchVesselsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -474,7 +474,7 @@ func (s *SearchService) Ports(ctx context.Context, params *GetSearchPortsParams)
 	}
 	parsed, err := ParseGetSearchPortsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func (s *SearchService) DGPS(ctx context.Context, params *GetSearchDgpsParams) (
 	}
 	parsed, err := ParseGetSearchDgpsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -524,7 +524,7 @@ func (s *SearchService) LightAids(ctx context.Context, params *GetSearchLightaid
 	}
 	parsed, err := ParseGetSearchLightaidsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -549,7 +549,7 @@ func (s *SearchService) MODUs(ctx context.Context, params *GetSearchModusParams)
 	}
 	parsed, err := ParseGetSearchModusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -574,7 +574,7 @@ func (s *SearchService) RadioBeacons(ctx context.Context, params *GetSearchRadio
 	}
 	parsed, err := ParseGetSearchRadiobeaconsResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -604,7 +604,7 @@ func (s *LocationService) VesselsBoundingBox(ctx context.Context, params *GetLoc
 	}
 	parsed, err := ParseGetLocationVesselsBoundingBoxResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -629,7 +629,7 @@ func (s *LocationService) VesselsRadius(ctx context.Context, params *GetLocation
 	}
 	parsed, err := ParseGetLocationVesselsRadiusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -654,7 +654,7 @@ func (s *LocationService) PortsBoundingBox(ctx context.Context, params *GetLocat
 	}
 	parsed, err := ParseGetLocationPortsBoundingBoxResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -679,7 +679,7 @@ func (s *LocationService) PortsRadius(ctx context.Context, params *GetLocationPo
 	}
 	parsed, err := ParseGetLocationPortsRadiusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -704,7 +704,7 @@ func (s *LocationService) DGPSBoundingBox(ctx context.Context, params *GetLocati
 	}
 	parsed, err := ParseGetLocationDgpsBoundingBoxResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -729,7 +729,7 @@ func (s *LocationService) DGPSRadius(ctx context.Context, params *GetLocationDgp
 	}
 	parsed, err := ParseGetLocationDgpsRadiusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -754,7 +754,7 @@ func (s *LocationService) LightAidsBoundingBox(ctx context.Context, params *GetL
 	}
 	parsed, err := ParseGetLocationLightaidsBoundingBoxResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -779,7 +779,7 @@ func (s *LocationService) LightAidsRadius(ctx context.Context, params *GetLocati
 	}
 	parsed, err := ParseGetLocationLightaidsRadiusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -804,7 +804,7 @@ func (s *LocationService) MODUsBoundingBox(ctx context.Context, params *GetLocat
 	}
 	parsed, err := ParseGetLocationModuBoundingBoxResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -829,7 +829,7 @@ func (s *LocationService) MODUsRadius(ctx context.Context, params *GetLocationMo
 	}
 	parsed, err := ParseGetLocationModuRadiusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -854,7 +854,7 @@ func (s *LocationService) RadioBeaconsBoundingBox(ctx context.Context, params *G
 	}
 	parsed, err := ParseGetLocationRadiobeaconsBoundingBoxResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -879,7 +879,7 @@ func (s *LocationService) RadioBeaconsRadius(ctx context.Context, params *GetLoc
 	}
 	parsed, err := ParseGetLocationRadiobeaconsRadiusResponse(rsp)
 	if err != nil {
-		return nil, fmt.Errorf("vesselapi: %w", err)
+		return nil, errFromParseFailure(rsp, err)
 	}
 	if err := errFromStatus(parsed.StatusCode(), parsed.Body); err != nil {
 		return nil, err
@@ -891,6 +891,25 @@ func (s *LocationService) RadioBeaconsRadius(ctx context.Context, params *GetLoc
 }
 
 // --- Error checking helpers ---
+
+// errFromParseFailure turns an undecodable response into an error that still
+// names the HTTP status.
+//
+// The generated parser only decodes a body when the content type claims JSON
+// and the status is one the spec declares, and it discards the body when
+// decoding fails. A declared error status arriving with an empty or malformed
+// JSON body therefore surfaced as a bare syntax error: the status was lost and
+// errors.As(&APIError) did not match, so IsNotFound, IsRateLimited and the rest
+// silently failed to fire. The body cannot be recovered here, but the status
+// can, and the status is what callers branch on.
+func errFromParseFailure(rsp *http.Response, err error) error {
+	if rsp != nil {
+		if apiErr := errFromStatus(rsp.StatusCode, nil); apiErr != nil {
+			return apiErr
+		}
+	}
+	return fmt.Errorf("vesselapi: %w", err)
+}
 
 func errFromStatus(statusCode int, body []byte) error {
 	if statusCode >= 200 && statusCode < 300 {

@@ -25,6 +25,21 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
 
+      # The example is a separate module, so ./... above never reaches it. It is
+      # the first code a new user runs, and it broke once without CI noticing.
+      - name: Build the example module
+        working-directory: examples/basic
+        run: |
+          go build ./...
+          go vet ./...
+
+      - name: Check formatting and module tidiness
+        run: |
+          if [ -n "$(gofmt -s -l .)" ]; then
+            echo "These files need gofmt -s -w:"; gofmt -s -l .; exit 1
+          fi
+          go mod tidy -diff
+
   smoke-tests:
     name: Smoke Tests
     runs-on: ubuntu-latest
