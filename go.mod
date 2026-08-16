@@ -1,3 +1,4 @@
+// Deprecated: no longer maintained. Use github.com/vessel-api/vesselapi-go/v4, which fixes an API key disclosure on cross-origin redirects.
 module github.com/vessel-api/vesselapi-go
 
 go 1.22
