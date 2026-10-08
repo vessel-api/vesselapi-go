@@ -17,6 +17,8 @@ go get github.com/vessel-api/vesselapi-go/v4
 
 Requires Go 1.24+ (raised in v4: the generated client depends on oapi-codegen/runtime v1.6.0, which requires Go 1.24).
 
+Older major versions (v1 to v3) are deprecated. Their pages on pkg.go.dev cannot be edited and still list classification, inspection, ownership and NAVTEX methods. The API retired those endpoints in August 2026 and now answers them with HTTP 410, so use v4.
+
 ## Quick Start
 
 ```go
@@ -116,7 +118,8 @@ if err == nil && pos.VesselPosition != nil {
 	)
 }
 
-// Find all vessels within 10 km of Rotterdam.
+// Find vessels with an AIS position within 10 km of Rotterdam in the last 2 hours
+// (the default time window, at most 4 hours).
 nearby, err := client.Location.VesselsRadius(ctx, &vesselapi.GetLocationVesselsRadiusParams{
 	FilterLatitude:  51.9225,
 	FilterLongitude: 4.47917,

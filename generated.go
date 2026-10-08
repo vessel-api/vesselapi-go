@@ -2590,7 +2590,7 @@ type ClientInterface interface {
 
 	// GetVesselIdPosition Get last known vessel position
 	//
-	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use sat=true to enable satellite AIS fallback when terrestrial data is stale — requires satellite credits.
+	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
 	//
 	// Corresponds with GET /vessel/{id}/position (the `GetVesselIdPosition` operationId).
 	GetVesselIdPosition(ctx context.Context, id string, params *GetVesselIdPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3130,7 +3130,7 @@ func (c *Client) GetVesselIdEta(ctx context.Context, id string, params *GetVesse
 
 // GetVesselIdPosition Get last known vessel position
 //
-// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use sat=true to enable satellite AIS fallback when terrestrial data is stale — requires satellite credits.
+// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
 //
 // Corresponds with GET /vessel/{id}/position (the `GetVesselIdPosition` operationId).
 func (c *Client) GetVesselIdPosition(ctx context.Context, id string, params *GetVesselIdPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6606,7 +6606,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetVesselIdPositionWithResponse Get last known vessel position
 	//
-	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use sat=true to enable satellite AIS fallback when terrestrial data is stale — requires satellite credits.
+	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -9683,7 +9683,7 @@ func (c *ClientWithResponses) GetVesselIdEtaWithResponse(ctx context.Context, id
 
 // GetVesselIdPositionWithResponse Get last known vessel position
 //
-// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use sat=true to enable satellite AIS fallback when terrestrial data is stale — requires satellite credits.
+// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
 //
 // Returns a wrapper object for the known response body format(s).
 //

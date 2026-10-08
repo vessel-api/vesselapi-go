@@ -3,6 +3,22 @@
 Notable changes in this release. Earlier versions predate this file.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [4.0.1] - 2026-10-08
+
+Documentation only. No function, parameter or type changed.
+
+### Fixed
+
+- Doc comments and the bundled OpenAPI spec named the satellite fallback
+  parameter `sat`; the API's parameter is `filter.sat`.
+- The 4.0.0 security advisory now lists 3.1.1 among the affected versions.
+
+### Changed
+
+- README: the radius example describes the time window it searches (default
+  2 hours, at most 4), and a note explains that v1 to v3 are deprecated and that
+  their pkg.go.dev pages still list retired methods.
+
 ## [4.0.0] - 2026-08-15
 
 Vessel ownership, classification and inspection data, and NAVTEX messages, were
@@ -20,7 +36,7 @@ to another host therefore arrives carrying a valid key.
 | Module path | Affected |
 |---|---|
 | `github.com/vessel-api/vesselapi-go` | 1.0.0, and 2.0.0 if vendored |
-| `github.com/vessel-api/vesselapi-go/v3` | 3.0.0, 3.1.0 |
+| `github.com/vessel-api/vesselapi-go/v3` | 3.0.0, 3.1.0, 3.1.1 |
 
 2.0.0 cannot be resolved by `go get` at any path, so it is only reachable by
 vendoring or a `replace` directive.
