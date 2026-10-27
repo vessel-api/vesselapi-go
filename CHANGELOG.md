@@ -3,15 +3,42 @@
 Notable changes in this release. Earlier versions predate this file.
 This project follows [Semantic Versioning](https://semver.org/).
 
-## [4.1.0] - 2026-10-26
+## [4.1.1] - 2026-10-27
+
+Documentation and spec only. No function, parameter or type changed.
+
+### Changed
+
+- The API now returns `PositionCheck.IdentityMatch` only when it holds a record
+  for the vessel and an identifier can be compared. In other cases the field is
+  nil. Before this change, a vessel with no record always got `true`.
+- The API now checks every returned position for a suspected glitch, measured
+  from the vessel's previous clean report. More positions can come back with
+  `SuspectedGlitch` set to `true`.
+- The bundled OpenAPI spec is synced with the API. Doc comments no longer repeat
+  the field name ("DistanceNm DistanceNM Great-circle distance..." now reads
+  "DistanceNm Great-circle distance...").
+
+### Fixed
+
+- Doc comments now say when `IdentityMatch` and `VesselEta` are nil. `VesselEta`
+  is nil when no destination or ETA is available, including when the lookup does
+  not finish in time. The 4.1.0 notes said it was nil only when the API held no
+  record.
+- `SpeedObservedMax` and `ExceedsTypicalSpeed` describe the vessel's usual top
+  speed (the 99th percentile of its recent speeds) and no longer call it a peak.
+- Doc comments call the position in the response the "returned" position, where
+  they said "served".
+
+## [4.1.0] - 2026-10-27
 
 ### Added
 
 - `VesselPositionResponse` has three new fields, which the API returns on every
-  position response since 25 October 2026: `Vessel` (the same object as
-  `Vessels.Get`), `VesselEta` (the same object as `Vessels.ETA`) and
-  `PositionCheck`. `Vessel` and `VesselEta` are nil when the API holds no record
-  for them. Earlier versions drop these keys when decoding.
+  position response since 25 October 2026: `Vessel` (the same object as in
+  `Vessels.Get`'s response), `VesselEta` (the same object as in `Vessels.ETA`'s
+  response) and `PositionCheck`. `Vessel` and `VesselEta` are nil when the API
+  holds no record for them. Earlier versions drop these keys when decoding.
 - `PositionCheck` compares the position with the vessel's previous report from
   the last 80 hours. It gives the time and great-circle distance since then, and
   the speed and course that would cover that distance. It also says whether that

@@ -403,90 +403,90 @@ type BadRequestErrorResponse struct {
 
 // DGPSStation Differential GPS (DGPS) correction signal broadcast station
 type DGPSStation struct {
-	// AidType AidType Type of navigational aid
+	// AidType Type of navigational aid
 	//
 	// Example: DGPS
 	AidType *string `json:"aid_type,omitempty"`
 
-	// DeleteFlag DeleteFlag Deletion status flag
+	// DeleteFlag Deletion status flag
 	DeleteFlag *string `json:"delete_flag,omitempty"`
 
-	// FeatureNumber FeatureNumber NGA feature number identifier
+	// FeatureNumber NGA feature number identifier
 	//
 	// Example: 1234.5
 	FeatureNumber *float64 `json:"feature_number,omitempty"`
 
-	// Frequency Frequency Broadcast frequency in kHz
+	// Frequency Broadcast frequency in kHz
 	//
 	// Example: 290
 	Frequency *float64 `json:"frequency,omitempty"`
 
-	// GeopoliticalHeading GeopoliticalHeading Country or major geographic area
+	// GeopoliticalHeading Country or major geographic area
 	//
 	// Example: UNITED STATES
 	GeopoliticalHeading *string `json:"geopolitical_heading,omitempty"`
 
-	// Location Location GeoJSON point for geospatial queries
+	// Location GeoJSON point for geospatial queries
 	Location *GeoJSON `json:"location,omitempty"`
 
-	// Name Name Station name
+	// Name Station name
 	//
 	// Example: Cape Henry DGPS
 	Name *string `json:"name,omitempty"`
 
-	// NoticeNumber NoticeNumber Notice to Mariners number
+	// NoticeNumber Notice to Mariners number
 	//
 	// Example: 12
 	NoticeNumber *int `json:"notice_number,omitempty"`
 
-	// NoticeWeek NoticeWeek Week of the notice
+	// NoticeWeek Week of the notice
 	//
 	// Example: 15
 	NoticeWeek *string `json:"notice_week,omitempty"`
 
-	// NoticeYear NoticeYear Year of the notice
+	// NoticeYear Year of the notice
 	//
 	// Example: 2024
 	NoticeYear *string `json:"notice_year,omitempty"`
 
-	// Position Position Human-readable position description
+	// Position Human-readable position description
 	//
 	// Example: 36°55.5'N 76°00.3'W
 	Position *string `json:"position,omitempty"`
 
-	// PostNote PostNote Notes appearing after the main entry
+	// PostNote Notes appearing after the main entry
 	PostNote *string `json:"post_note,omitempty"`
 
-	// PrecedingNote PrecedingNote Notes appearing before the main entry
+	// PrecedingNote Notes appearing before the main entry
 	PrecedingNote *string `json:"preceding_note,omitempty"`
 
-	// Range Range Signal range in nautical miles
+	// Range Signal range in nautical miles
 	//
 	// Example: 100
 	Range *int `json:"range,omitempty"`
 
-	// RegionHeading RegionHeading Regional geographic subdivision
+	// RegionHeading Regional geographic subdivision
 	//
 	// Example: EAST COAST
 	RegionHeading *string `json:"region_heading,omitempty"`
 
-	// Remarks Remarks Additional remarks about the station
+	// Remarks Additional remarks about the station
 	Remarks *string `json:"remarks,omitempty"`
 
-	// RemoveFromList RemoveFromList Flag indicating if entry should be removed
+	// RemoveFromList Flag indicating if entry should be removed
 	RemoveFromList *string `json:"remove_from_list,omitempty"`
 
-	// StationId StationID Station identifier code
+	// StationId Station identifier code
 	//
 	// Example: 852
 	StationId *string `json:"station_id,omitempty"`
 
-	// TransferRate TransferRate Data transfer rate in bits per second
+	// TransferRate Data transfer rate in bits per second
 	//
 	// Example: 200
 	TransferRate *int `json:"transfer_rate,omitempty"`
 
-	// VolumeNumber VolumeNumber NGA publication volume number
+	// VolumeNumber NGA publication volume number
 	//
 	// Example: PUB 117
 	VolumeNumber *string `json:"volume_number,omitempty"`
@@ -566,12 +566,12 @@ type ForbiddenErrorResponse struct {
 
 // GeoJSON GeoJSON Point geometry for geospatial coordinates
 type GeoJSON struct {
-	// Coordinates Coordinates Array of [longitude, latitude] in decimal degrees
+	// Coordinates Array of [longitude, latitude] in decimal degrees
 	//
 	// Example: [103.8215,1.2644]
 	Coordinates *[]float64 `json:"coordinates,omitempty"`
 
-	// Type Type GeoJSON geometry type, always "Point" for location data
+	// Type GeoJSON geometry type, always "Point" for location data
 	//
 	// Example: Point
 	Type *string `json:"type,omitempty"`
@@ -612,97 +612,97 @@ type InternalServerErrorResponse struct {
 
 // LightAid Navigational light aid including lighthouses, buoys, and beacons
 type LightAid struct {
-	// AidType AidType Type of navigational aid (Light, Buoy, Beacon, etc.)
+	// AidType Type of navigational aid (Light, Buoy, Beacon, etc.)
 	//
 	// Example: Light
 	AidType *string `json:"aid_type,omitempty"`
 
-	// Characteristic Characteristic Light flash pattern description (e.g., Fl W 7.5s)
+	// Characteristic Light flash pattern description (e.g., Fl W 7.5s)
 	//
 	// Example: Fl W 7.5s
 	Characteristic *string `json:"characteristic,omitempty"`
 
-	// CharacteristicNumber CharacteristicNumber Light characteristic code number
+	// CharacteristicNumber Light characteristic code number
 	CharacteristicNumber *int `json:"characteristic_number,omitempty"`
 
-	// DeleteFlag DeleteFlag Deletion status flag
+	// DeleteFlag Deletion status flag
 	DeleteFlag *string `json:"delete_flag,omitempty"`
 
-	// FeatureNumber FeatureNumber NGA feature number identifier
+	// FeatureNumber NGA feature number identifier
 	//
 	// Example: 590
 	FeatureNumber *string `json:"feature_number,omitempty"`
 
-	// GeopoliticalHeading GeopoliticalHeading Country or major geographic area
+	// GeopoliticalHeading Country or major geographic area
 	//
 	// Example: UNITED STATES
 	GeopoliticalHeading *string `json:"geopolitical_heading,omitempty"`
 
-	// HeightFeetMeters HeightFeetMeters Height of light above water in feet and meters
+	// HeightFeetMeters Height of light above water in feet and meters
 	//
 	// Example: 192ft 59m
 	HeightFeetMeters *string `json:"height_feet_meters,omitempty"`
 
-	// LocalHeading LocalHeading Local area description
+	// LocalHeading Local area description
 	//
 	// Example: Cape Hatteras
 	LocalHeading *string `json:"local_heading,omitempty"`
 
-	// Location Location GeoJSON point for geospatial queries
+	// Location GeoJSON point for geospatial queries
 	Location *GeoJSON `json:"location,omitempty"`
 
-	// Name Name Name of the light aid
+	// Name Name of the light aid
 	//
 	// Example: Cape Hatteras Light
 	Name *string `json:"name,omitempty"`
 
-	// NoticeNumber NoticeNumber Notice to Mariners number
+	// NoticeNumber Notice to Mariners number
 	NoticeNumber *int `json:"notice_number,omitempty"`
 
-	// NoticeWeek NoticeWeek Week of the notice
+	// NoticeWeek Week of the notice
 	NoticeWeek *string `json:"notice_week,omitempty"`
 
-	// NoticeYear NoticeYear Year of the notice
+	// NoticeYear Year of the notice
 	NoticeYear *string `json:"notice_year,omitempty"`
 
-	// Position Position Human-readable position description
+	// Position Human-readable position description
 	//
 	// Example: 35°15.1'N 75°31.6'W
 	Position *string `json:"position,omitempty"`
 
-	// PostNote PostNote Notes appearing after the main entry
+	// PostNote Notes appearing after the main entry
 	PostNote *string `json:"post_note,omitempty"`
 
-	// PrecedingNote PrecedingNote Notes appearing before the main entry
+	// PrecedingNote Notes appearing before the main entry
 	PrecedingNote *string `json:"preceding_note,omitempty"`
 
-	// Range Range Nominal range of light in nautical miles
+	// Range Nominal range of light in nautical miles
 	//
 	// Example: 24
 	Range *string `json:"range,omitempty"`
 
-	// RegionHeading RegionHeading Regional geographic subdivision
+	// RegionHeading Regional geographic subdivision
 	//
 	// Example: EAST COAST
 	RegionHeading *string `json:"region_heading,omitempty"`
 
-	// Remarks Remarks Additional remarks about the light
+	// Remarks Additional remarks about the light
 	Remarks *string `json:"remarks,omitempty"`
 
-	// RemoveFromList RemoveFromList Flag indicating if entry should be removed
+	// RemoveFromList Flag indicating if entry should be removed
 	RemoveFromList *string `json:"remove_from_list,omitempty"`
 
-	// Structure Structure Description of the physical structure
+	// Structure Description of the physical structure
 	//
 	// Example: Black and white spiral bands
 	Structure *string `json:"structure,omitempty"`
 
-	// SubregionHeading SubregionHeading Sub-regional geographic area
+	// SubregionHeading Sub-regional geographic area
 	//
 	// Example: North Carolina
 	SubregionHeading *string `json:"subregion_heading,omitempty"`
 
-	// VolumeNumber VolumeNumber NGA publication volume number
+	// VolumeNumber NGA publication volume number
 	//
 	// Example: PUB 110
 	VolumeNumber *string `json:"volume_number,omitempty"`
@@ -716,54 +716,54 @@ type LightAidsWithinLocationResponse struct {
 
 // MODU Mobile Offshore Drilling Unit (MODU) location and status information
 type MODU struct {
-	// Date Date Date of the position report (parsed from API string format YYYY-MM-DD)
+	// Date Date of the position report (parsed from API string format YYYY-MM-DD)
 	Date *string `json:"date,omitempty"`
 
-	// Distance Distance Distance from reference point in nautical miles
+	// Distance Distance from reference point in nautical miles
 	Distance *float64 `json:"distance,omitempty"`
 
-	// Latitude Latitude Geographic latitude in decimal degrees
+	// Latitude Geographic latitude in decimal degrees
 	//
 	// Example: 28.7381
 	Latitude *float64 `json:"latitude,omitempty"`
 
-	// Location Location GeoJSON point for geospatial queries
+	// Location GeoJSON point for geospatial queries
 	Location *GeoJSON `json:"location,omitempty"`
 
-	// Longitude Longitude Geographic longitude in decimal degrees
+	// Longitude Geographic longitude in decimal degrees
 	//
 	// Example: -88.3659
 	Longitude *float64 `json:"longitude,omitempty"`
 
-	// Name Name Name of the drilling unit
+	// Name Name of the drilling unit
 	//
 	// Example: DEEPWATER HORIZON
 	Name *string `json:"name,omitempty"`
 
-	// NavigationArea NavigationArea NAVAREA designation
+	// NavigationArea NAVAREA designation
 	//
 	// Example: IV
 	NavigationArea *string `json:"navigation_area,omitempty"`
 
-	// Position Position Human-readable position description
+	// Position Human-readable position description
 	//
 	// Example: Gulf of Mexico
 	Position *string `json:"position,omitempty"`
 
-	// Region Region NGA region code
+	// Region NGA region code
 	//
 	// Example: 8
 	Region *int `json:"region,omitempty"`
 
-	// RigStatus RigStatus Current operational status of the rig
+	// RigStatus Current operational status of the rig
 	//
 	// Example: Drilling
 	RigStatus *string `json:"rig_status,omitempty"`
 
-	// SpecialStatus SpecialStatus Any special status or notes
+	// SpecialStatus Any special status or notes
 	SpecialStatus *string `json:"special_status,omitempty"`
 
-	// SubRegion SubRegion NGA sub-region code
+	// SubRegion NGA sub-region code
 	//
 	// Example: 81
 	SubRegion *int `json:"sub_region,omitempty"`
@@ -870,193 +870,193 @@ type PaymentRequiredErrorResponse struct {
 
 // Port Port information including facilities, services, and characteristics where available
 type Port struct {
-	// AnchorageDepth AnchorageDepth Depth at the anchorage area
+	// AnchorageDepth Depth at the anchorage area
 	//
 	// Example: 20
 	AnchorageDepth *float64 `json:"anchorage_depth,omitempty"`
 
-	// AnchorageDepthUnit AnchorageDepthUnit Unit for anchorage depth measurement
+	// AnchorageDepthUnit Unit for anchorage depth measurement
 	//
 	// Example: m
 	AnchorageDepthUnit *string `json:"anchorage_depth_unit,omitempty"`
 
-	// CargoHandlingDepth CargoHandlingDepth Depth at cargo handling berths
+	// CargoHandlingDepth Depth at cargo handling berths
 	//
 	// Example: 18
 	CargoHandlingDepth *float64 `json:"cargo_handling_depth,omitempty"`
 
-	// CargoHandlingDepthUnit CargoHandlingDepthUnit Unit for cargo handling depth measurement
+	// CargoHandlingDepthUnit Unit for cargo handling depth measurement
 	//
 	// Example: m
 	CargoHandlingDepthUnit *string `json:"cargo_handling_depth_unit,omitempty"`
 
-	// ChannelDepth ChannelDepth Depth of the approach channel
+	// ChannelDepth Depth of the approach channel
 	//
 	// Example: 23
 	ChannelDepth *float64 `json:"channel_depth,omitempty"`
 
-	// ChannelDepthUnit ChannelDepthUnit Unit for channel depth measurement
+	// ChannelDepthUnit Unit for channel depth measurement
 	//
 	// Example: m
 	ChannelDepthUnit *string `json:"channel_depth_unit,omitempty"`
 
-	// Country Country Country information for the port
+	// Country Country information for the port
 	Country *ContractsPortCountry `json:"country,omitempty"`
 
-	// GarbageDisposal GarbageDisposal Whether garbage disposal services are available
+	// GarbageDisposal Whether garbage disposal services are available
 	//
 	// Example: true
 	GarbageDisposal *bool `json:"garbage_disposal,omitempty"`
 
-	// HarborSize HarborSize Harbor size classification (Large/Medium/Small/Very Small)
+	// HarborSize Harbor size classification (Large/Medium/Small/Very Small)
 	//
 	// Example: Large
 	HarborSize *string `json:"harbor_size,omitempty"`
 
-	// HarborType HarborType Type of harbor (CB=Coastal Breakwater, CN=Coastal Natural, etc.)
+	// HarborType Type of harbor (CB=Coastal Breakwater, CN=Coastal Natural, etc.)
 	//
 	// Example: CN
 	HarborType *string `json:"harbor_type,omitempty"`
 
-	// HarborUse HarborUse Primary use of the harbor (FISH/MIL/CARGO/FERRY/UNK)
+	// HarborUse Primary use of the harbor (FISH/MIL/CARGO/FERRY/UNK)
 	//
 	// Example: CARGO
 	HarborUse *string `json:"harbor_use,omitempty"`
 
-	// HasDrydock HasDrydock Whether the port has drydock facilities
+	// HasDrydock Whether the port has drydock facilities
 	//
 	// Example: true
 	HasDrydock *bool `json:"has_drydock,omitempty"`
 
-	// Latitude Latitude Geographic latitude in decimal degrees
+	// Latitude Geographic latitude in decimal degrees
 	//
 	// Example: 1.2644
 	Latitude *float64 `json:"latitude,omitempty"`
 
-	// Location Location GeoJSON point for geospatial queries
+	// Location GeoJSON point for geospatial queries
 	Location *GeoJSON `json:"location,omitempty"`
 
-	// Longitude Longitude Geographic longitude in decimal degrees
+	// Longitude Geographic longitude in decimal degrees
 	//
 	// Example: 103.8215
 	Longitude *float64 `json:"longitude,omitempty"`
 
-	// MaxVesselBeam MaxVesselBeam Maximum beam (width) of vessel that can be accommodated
+	// MaxVesselBeam Maximum beam (width) of vessel that can be accommodated
 	//
 	// Example: 60
 	MaxVesselBeam *float64 `json:"max_vessel_beam,omitempty"`
 
-	// MaxVesselBeamUnit MaxVesselBeamUnit Unit for maximum vessel beam
+	// MaxVesselBeamUnit Unit for maximum vessel beam
 	//
 	// Example: m
 	MaxVesselBeamUnit *string `json:"max_vessel_beam_unit,omitempty"`
 
-	// MaxVesselDraft MaxVesselDraft Maximum draft of vessel that can be accommodated
+	// MaxVesselDraft Maximum draft of vessel that can be accommodated
 	//
 	// Example: 16
 	MaxVesselDraft *float64 `json:"max_vessel_draft,omitempty"`
 
-	// MaxVesselDraftUnit MaxVesselDraftUnit Unit for maximum vessel draft
+	// MaxVesselDraftUnit Unit for maximum vessel draft
 	//
 	// Example: m
 	MaxVesselDraftUnit *string `json:"max_vessel_draft_unit,omitempty"`
 
-	// MaxVesselLength MaxVesselLength Maximum length of vessel that can be accommodated
+	// MaxVesselLength Maximum length of vessel that can be accommodated
 	//
 	// Example: 400
 	MaxVesselLength *float64 `json:"max_vessel_length,omitempty"`
 
-	// MaxVesselLengthUnit MaxVesselLengthUnit Unit for maximum vessel length
+	// MaxVesselLengthUnit Unit for maximum vessel length
 	//
 	// Example: m
 	MaxVesselLengthUnit *string `json:"max_vessel_length_unit,omitempty"`
 
-	// MedicalFacilities MedicalFacilities Whether medical facilities are available at the port
+	// MedicalFacilities Whether medical facilities are available at the port
 	//
 	// Example: true
 	MedicalFacilities *bool `json:"medical_facilities,omitempty"`
 
-	// Name Name The port's official name
+	// Name The port's official name
 	//
 	// Example: Singapore
 	Name *string `json:"name,omitempty"`
 
-	// NavigationArea NavigationArea NAVAREA designation for maritime safety communications
+	// NavigationArea NAVAREA designation for maritime safety communications
 	//
 	// Example: XI
 	NavigationArea *string `json:"navigation_area,omitempty"`
 
-	// PilotageAvailable PilotageAvailable Whether pilotage services are available
+	// PilotageAvailable Whether pilotage services are available
 	//
 	// Example: true
 	PilotageAvailable *bool `json:"pilotage_available,omitempty"`
 
-	// PilotageCompulsory PilotageCompulsory Whether pilotage is mandatory for vessel entry
+	// PilotageCompulsory Whether pilotage is mandatory for vessel entry
 	//
 	// Example: true
 	PilotageCompulsory *bool `json:"pilotage_compulsory,omitempty"`
 
-	// PortSecurity PortSecurity Whether ISPS (International Ship and Port Facility Security) compliant
+	// PortSecurity Whether ISPS (International Ship and Port Facility Security) compliant
 	//
 	// Example: true
 	PortSecurity *bool `json:"port_security,omitempty"`
 
-	// RegionName RegionName Geographic region where the port is located
+	// RegionName Geographic region where the port is located
 	//
 	// Example: Southeast Asia
 	RegionName *string `json:"region_name,omitempty"`
 
-	// RepairCapability RepairCapability Level of ship repair capability (Major/Moderate/Limited/Emergency/None)
+	// RepairCapability Level of ship repair capability (Major/Moderate/Limited/Emergency/None)
 	//
 	// Example: Major
 	RepairCapability *string `json:"repair_capability,omitempty"`
 
-	// Shelter Shelter Quality of shelter from weather (Excellent/Good/Fair/Poor/None)
+	// Shelter Quality of shelter from weather (Excellent/Good/Fair/Poor/None)
 	//
 	// Example: Excellent
 	Shelter *string `json:"shelter,omitempty"`
 
-	// Size Size Size classification of the port
+	// Size Size classification of the port
 	//
 	// Example: Large
 	Size *string `json:"size,omitempty"`
 
-	// SupplyDiesel SupplyDiesel Whether diesel supply is available
+	// SupplyDiesel Whether diesel supply is available
 	//
 	// Example: true
 	SupplyDiesel *bool `json:"supply_diesel,omitempty"`
 
-	// SupplyFuel SupplyFuel Whether fuel oil supply is available
+	// SupplyFuel Whether fuel oil supply is available
 	//
 	// Example: true
 	SupplyFuel *bool `json:"supply_fuel,omitempty"`
 
-	// SupplyWater SupplyWater Whether fresh water supply is available
+	// SupplyWater Whether fresh water supply is available
 	//
 	// Example: true
 	SupplyWater *bool `json:"supply_water,omitempty"`
 
-	// TrafficSeparationScheme TrafficSeparationScheme Whether a TSS (Traffic Separation Scheme) is in place
+	// TrafficSeparationScheme Whether a TSS (Traffic Separation Scheme) is in place
 	//
 	// Example: true
 	TrafficSeparationScheme *bool `json:"traffic_separation_scheme,omitempty"`
 
-	// TugsAvailable TugsAvailable Whether tug services are available
+	// TugsAvailable Whether tug services are available
 	//
 	// Example: true
 	TugsAvailable *bool `json:"tugs_available,omitempty"`
 
-	// Type Type Port classification type
+	// Type Port classification type
 	//
 	// Example: Seaport
 	Type *string `json:"type,omitempty"`
 
-	// UnloCode UnloCode UN Location Code (LOCODE) - unique port identifier
+	// UnloCode UN Location Code (LOCODE) - unique port identifier
 	//
 	// Example: SGSIN
 	UnloCode *string `json:"unlo_code,omitempty"`
 
-	// VesselTrafficService VesselTrafficService Whether VTS (Vessel Traffic Service) is operational
+	// VesselTrafficService Whether VTS (Vessel Traffic Service) is operational
 	//
 	// Example: true
 	VesselTrafficService *bool `json:"vessel_traffic_service,omitempty"`
@@ -1064,18 +1064,18 @@ type Port struct {
 
 // PortEvent Vessel port call event including arrivals and departures
 type PortEvent struct {
-	// Event Event Type of port event - either "Arrival" or "Departure"
+	// Event Type of port event - either "Arrival" or "Departure"
 	//
 	// Example: Arrival
 	Event *string `json:"event,omitempty"`
 
-	// Port Port Reference to the port where the event occurred
+	// Port Reference to the port where the event occurred
 	Port *PortReference `json:"port,omitempty"`
 
-	// Timestamp Timestamp UTC timestamp when the event occurred
+	// Timestamp UTC timestamp when the event occurred
 	Timestamp *string `json:"timestamp,omitempty"`
 
-	// Vessel Vessel Reference to the vessel involved in the port event
+	// Vessel Reference to the vessel involved in the port event
 	Vessel *VesselReference `json:"vessel,omitempty"`
 }
 
@@ -1102,17 +1102,17 @@ type PortInboundResponse struct {
 
 // PortReference Port identification details for port event reference
 type PortReference struct {
-	// Country Country Country where the port is located
+	// Country Country where the port is located
 	//
 	// Example: Singapore
 	Country *string `json:"country,omitempty"`
 
-	// Name Name The port's official name
+	// Name The port's official name
 	//
 	// Example: Singapore
 	Name *string `json:"name,omitempty"`
 
-	// UnloCode UnloCode UN Location Code (LOCODE) for the port
+	// UnloCode UN Location Code (LOCODE) for the port
 	//
 	// Example: SGSIN
 	UnloCode *string `json:"unlo_code,omitempty"`
@@ -1132,42 +1132,42 @@ type PortsWithinLocationResponse struct {
 
 // PositionCheck defines model for PositionCheck.
 type PositionCheck struct {
-	// DistanceNm DistanceNM Great-circle distance from the previous position, in nautical miles
+	// DistanceNm Great-circle distance from the previous position, in nautical miles
 	//
 	// Example: 96.3
 	DistanceNm *float64 `json:"distance_nm,omitempty"`
 
-	// ExceedsTypicalSpeed ExceedsTypicalSpeed True when the implied speed is more than 1.2 times the vessel's usual top speed (99th percentile of reported speed) over the last 31 days
+	// ExceedsTypicalSpeed True when the implied speed is more than 1.2 times the vessel's usual top speed (99th percentile of its recent speeds)
 	//
 	// Example: false
 	ExceedsTypicalSpeed *bool `json:"exceeds_typical_speed,omitempty"`
 
-	// IdentityMatch IdentityMatch True when the served position's MMSI and IMO match the vessel's registered identifiers
+	// IdentityMatch True when the returned position's MMSI and IMO match the identifiers in our vessel record. Omitted when we hold no record or nothing can be compared.
 	//
 	// Example: true
 	IdentityMatch *bool `json:"identity_match,omitempty"`
 
-	// ImpliedCourse ImpliedCourse Initial great-circle bearing from the previous position, in degrees from true north
+	// ImpliedCourse Initial great-circle bearing from the previous position, in degrees from true north
 	//
 	// Example: 87
 	ImpliedCourse *int `json:"implied_course,omitempty"`
 
-	// ImpliedSpeedKn ImpliedSpeedKn Average speed needed to cover that distance in that time, in knots
+	// ImpliedSpeedKn Average speed needed to cover that distance in that time, in knots
 	//
 	// Example: 14
 	ImpliedSpeedKn *float64 `json:"implied_speed_kn,omitempty"`
 
-	// LookbackHours LookbackHours How far back the previous position was searched for
+	// LookbackHours How far back the previous position was searched for
 	//
 	// Example: 80
 	LookbackHours *int `json:"lookback_hours,omitempty"`
 
-	// MinutesSincePrevious MinutesSincePrevious Minutes between the previous position and the served one
+	// MinutesSincePrevious Minutes between the previous position and the returned one
 	//
 	// Example: 412
 	MinutesSincePrevious *int `json:"minutes_since_previous,omitempty"`
 
-	// PreviousPosition PreviousPosition The vessel's newest earlier position report within lookback_hours
+	// PreviousPosition The vessel's newest earlier position report within lookback_hours that is not a suspected glitch
 	PreviousPosition *PreviousPosition `json:"previous_position,omitempty"`
 }
 
@@ -1183,7 +1183,7 @@ type PreviousPosition struct {
 	// Example: 103.8215
 	Longitude *float64 `json:"longitude,omitempty"`
 
-	// Timestamp Timestamp When the previous position was reported (UTC)
+	// Timestamp When the previous position was reported (UTC)
 	//
 	// Example: 2026-10-24T03:10:00Z
 	Timestamp *string `json:"timestamp,omitempty"`
@@ -1191,82 +1191,82 @@ type PreviousPosition struct {
 
 // RadioBeacon Navigational radio beacon for maritime direction finding
 type RadioBeacon struct {
-	// AidType AidType Type of radio aid
+	// AidType Type of radio aid
 	//
 	// Example: RBn
 	AidType *string `json:"aid_type,omitempty"`
 
-	// Characteristic Characteristic Beacon transmission characteristic
+	// Characteristic Beacon transmission characteristic
 	//
 	// Example: A (.--)
 	Characteristic *string `json:"characteristic,omitempty"`
 
-	// DeleteFlag DeleteFlag Deletion status flag
+	// DeleteFlag Deletion status flag
 	DeleteFlag *string `json:"delete_flag,omitempty"`
 
-	// FeatureNumber FeatureNumber NGA feature number identifier
+	// FeatureNumber NGA feature number identifier
 	//
 	// Example: 456
 	FeatureNumber *float64 `json:"feature_number,omitempty"`
 
-	// Frequency Frequency Broadcast frequency
+	// Frequency Broadcast frequency
 	//
 	// Example: 286 kHz
 	Frequency *string `json:"frequency,omitempty"`
 
-	// GeopoliticalHeading GeopoliticalHeading Country or major geographic area
+	// GeopoliticalHeading Country or major geographic area
 	//
 	// Example: UNITED STATES
 	GeopoliticalHeading *string `json:"geopolitical_heading,omitempty"`
 
-	// Location Location GeoJSON point for geospatial queries
+	// Location GeoJSON point for geospatial queries
 	Location *GeoJSON `json:"location,omitempty"`
 
-	// Name Name Name of the radio beacon
+	// Name Name of the radio beacon
 	//
 	// Example: Ambrose Light
 	Name *string `json:"name,omitempty"`
 
-	// NoticeNumber NoticeNumber Notice to Mariners number
+	// NoticeNumber Notice to Mariners number
 	NoticeNumber *int `json:"notice_number,omitempty"`
 
-	// NoticeWeek NoticeWeek Week of the notice
+	// NoticeWeek Week of the notice
 	NoticeWeek *string `json:"notice_week,omitempty"`
 
-	// NoticeYear NoticeYear Year of the notice
+	// NoticeYear Year of the notice
 	NoticeYear *string `json:"notice_year,omitempty"`
 
-	// Position Position Human-readable position description
+	// Position Human-readable position description
 	//
 	// Example: 40°27.1'N 73°49.5'W
 	Position *string `json:"position,omitempty"`
 
-	// PostNote PostNote Notes appearing after the main entry
+	// PostNote Notes appearing after the main entry
 	PostNote *string `json:"post_note,omitempty"`
 
-	// PrecedingNote PrecedingNote Notes appearing before the main entry
+	// PrecedingNote Notes appearing before the main entry
 	PrecedingNote *string `json:"preceding_note,omitempty"`
 
-	// Range Range Signal range in nautical miles
+	// Range Signal range in nautical miles
 	//
 	// Example: 20
 	Range *string `json:"range,omitempty"`
 
-	// RegionHeading RegionHeading Regional geographic subdivision
+	// RegionHeading Regional geographic subdivision
 	//
 	// Example: EAST COAST
 	RegionHeading *string `json:"region_heading,omitempty"`
 
-	// RemoveFromList RemoveFromList Flag indicating if entry should be removed
+	// RemoveFromList Flag indicating if entry should be removed
 	RemoveFromList *string `json:"remove_from_list,omitempty"`
 
-	// SequenceText SequenceText Transmission sequence description
+	// SequenceText Transmission sequence description
 	SequenceText *string `json:"sequence_text,omitempty"`
 
-	// StationRemark StationRemark Remarks specific to the station
+	// StationRemark Remarks specific to the station
 	StationRemark *string `json:"station_remark,omitempty"`
 
-	// VolumeNumber VolumeNumber NGA publication volume number
+	// VolumeNumber NGA publication volume number
 	//
 	// Example: PUB 117
 	VolumeNumber *string `json:"volume_number,omitempty"`
@@ -1326,147 +1326,147 @@ type ServiceUnavailableErrorResponse struct {
 
 // Vessel Vessel static data including identification, dimensions, and capacities where available
 type Vessel struct {
-	// Breadth Breadth Maximum beam (width) of the vessel
+	// Breadth Maximum beam (width) of the vessel
 	//
 	// Example: 59
 	Breadth *int `json:"breadth,omitempty"`
 
-	// BreadthUnit BreadthUnit Unit of measurement for breadth (typically meters)
+	// BreadthUnit Unit of measurement for breadth (typically meters)
 	//
 	// Example: m
 	BreadthUnit *string `json:"breadth_unit,omitempty"`
 
-	// CallSign CallSign International radio call sign assigned to the vessel
+	// CallSign International radio call sign assigned to the vessel
 	//
 	// Example: H3RC
 	CallSign *string `json:"call_sign,omitempty"`
 
-	// Country Country Country of registration (flag state)
+	// Country Country of registration (flag state)
 	//
 	// Example: Panama
 	Country *string `json:"country,omitempty"`
 
-	// CountryCode CountryCode ISO 2-letter country code of flag state
+	// CountryCode ISO 2-letter country code of flag state
 	//
 	// Example: PA
 	CountryCode *string `json:"country_code,omitempty"`
 
-	// DeadweightTonnage DeadweightTonnage Deadweight tonnage (DWT) - maximum cargo capacity in metric tons
+	// DeadweightTonnage Deadweight tonnage (DWT) - maximum cargo capacity in metric tons
 	//
 	// Example: 199629
 	DeadweightTonnage *int `json:"deadweight_tonnage,omitempty"`
 
-	// Draft Draft Maximum draft (depth below waterline) of the vessel
+	// Draft Maximum draft (depth below waterline) of the vessel
 	//
 	// Example: 16
 	Draft *int `json:"draft,omitempty"`
 
-	// DraftUnit DraftUnit Unit of measurement for draft (typically meters)
+	// DraftUnit Unit of measurement for draft (typically meters)
 	//
 	// Example: m
 	DraftUnit *string `json:"draft_unit,omitempty"`
 
-	// DraughtCalculatedAvg DraughtCalculatedAvg Arithmetic mean of reported draught in meters over the last 31 days of ETA messages (zero readings excluded).
+	// DraughtCalculatedAvg Arithmetic mean of reported draught in metres over the last 31 days of ETA messages (zero readings excluded).
 	//
 	// Example: 13.8
 	DraughtCalculatedAvg *float64 `json:"draught_calculated_avg,omitempty"`
 
-	// DraughtObservedMax DraughtObservedMax Peak reported draught in meters observed over the last 31 days of ETA messages. Distinct from SummerDraught (design value).
+	// DraughtObservedMax Largest reported draught in metres over the last 31 days of ETA messages. Distinct from summer_draught (the design value).
 	//
 	// Example: 16
 	DraughtObservedMax *float64 `json:"draught_observed_max,omitempty"`
 
-	// EngineModelName EngineModelName Model name of the main engine
+	// EngineModelName Model name of the main engine
 	EngineModelName *string `json:"engine_model_name,omitempty"`
 
-	// EngineType EngineType Type code for the main engine
+	// EngineType Type code for the main engine
 	EngineType *int `json:"engine_type,omitempty"`
 
-	// Eni ENI European Number of Identification for inland waterway vessels (8 digits)
+	// Eni European Number of Identification for inland waterway vessels (8 digits)
 	Eni *string `json:"eni,omitempty"`
 
-	// FormerNames FormerNames List of previous names the vessel has operated under
+	// FormerNames List of previous names the vessel has operated under
 	FormerNames *[]ContractsVesselFormerName `json:"former_names,omitempty"`
 
-	// GrossTonnage GrossTonnage Gross tonnage (GT) - measure of vessel's overall internal volume
+	// GrossTonnage Gross tonnage (GT) - measure of vessel's overall internal volume
 	//
 	// Example: 220940
 	GrossTonnage *int `json:"gross_tonnage,omitempty"`
 
-	// HomePort HomePort Port of registry for the vessel
+	// HomePort Port of registry for the vessel
 	//
 	// Example: Panama City
 	HomePort *string `json:"home_port,omitempty"`
 
-	// Imo IMO International Maritime Organization number - permanent 7-digit vessel identifier
+	// Imo International Maritime Organization number - permanent 7-digit vessel identifier
 	//
 	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
-	// KilowattPower KilowattPower Main engine power in kilowatts
+	// KilowattPower Main engine power in kilowatts
 	//
 	// Example: 58000
 	KilowattPower *int `json:"kilowatt_power,omitempty"`
 
-	// Length Length Overall length of the vessel
+	// Length Overall length of the vessel
 	//
 	// Example: 400
 	Length *int `json:"length,omitempty"`
 
-	// LengthUnit LengthUnit Unit of measurement for length (typically meters)
+	// LengthUnit Unit of measurement for length (typically meters)
 	//
 	// Example: m
 	LengthUnit *string `json:"length_unit,omitempty"`
 
-	// Mmsi MMSI Maritime Mobile Service Identity - 9-digit radio identifier
+	// Mmsi Maritime Mobile Service Identity - 9-digit radio identifier
 	//
 	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
-	// Name Name The vessel's current registered name
+	// Name The vessel's current registered name
 	//
 	// Example: EVER GIVEN
 	Name *string `json:"name,omitempty"`
 
-	// NameAis NameAIS The name as currently broadcast on AIS — may differ from the registered Name immediately after a rename until the next master update.
+	// NameAis The name as currently broadcast on AIS. It may differ from the registered name for a short time after a rename, until our next registry update.
 	//
 	// Example: EVER GIVEN
 	NameAis *string `json:"name_ais,omitempty"`
 
-	// OperatingStatus OperatingStatus Current operational status (e.g., Active, Laid Up, Scrapped)
+	// OperatingStatus Current operational status (e.g., Active, Laid Up, Scrapped)
 	//
 	// Example: Active
 	OperatingStatus *string `json:"operating_status,omitempty"`
 
-	// SpeedCalculatedAvg SpeedCalculatedAvg Arithmetic mean of speed-over-ground in knots over the last 31 days of position reports, computed from this vessel's AIS history (stops excluded). Derived from our observations — distinct from design service speed.
+	// SpeedCalculatedAvg Arithmetic mean of speed over ground in knots over a recent 31-day window of position reports, computed from this vessel's AIS history (stops excluded). It is derived from our observations and is distinct from the design service speed.
 	//
 	// Example: 12.4
 	SpeedCalculatedAvg *float64 `json:"speed_calculated_avg,omitempty"`
 
-	// SpeedObservedMax SpeedObservedMax 99th-percentile peak speed-over-ground in knots over the last 31 days of position reports, capped at a sanity threshold to discard GPS glitches.
+	// SpeedObservedMax Usual top speed: the 99th percentile of speed over ground in knots over a recent 31-day window, capped at 40 knots to discard GPS glitches.
 	//
 	// Example: 22.1
 	SpeedObservedMax *float64 `json:"speed_observed_max,omitempty"`
 
-	// SummerDraught SummerDraught Maximum design draught (summer-load line). Static vessel attribute, distinct from DraughtObservedMax.
+	// SummerDraught Maximum design draught (summer-load line). Static vessel attribute, distinct from draught_observed_max.
 	//
 	// Example: 16.5
 	SummerDraught *float64 `json:"summer_draught,omitempty"`
 
-	// Teu TEU Twenty-foot equivalent unit container capacity. Populated only for container ships.
+	// Teu Twenty-foot equivalent unit container capacity. Populated only for container ships.
 	//
 	// Example: 23992
 	Teu *int `json:"teu,omitempty"`
 
-	// VesselSubtype VesselSubtype Finer-grained classification beyond VesselType (e.g., inland motor cargo or tanker vessel).
+	// VesselSubtype Finer-grained classification beyond vessel_type (e.g., inland motor cargo or tanker vessel).
 	VesselSubtype *string `json:"vessel_subtype,omitempty"`
 
-	// VesselType VesselType Classification of vessel type (e.g., Container Ship, Bulk Carrier)
+	// VesselType Classification of vessel type (e.g., Container Ship, Bulk Carrier)
 	//
 	// Example: Cargo A
 	VesselType *string `json:"vessel_type,omitempty"`
 
-	// YearBuilt YearBuilt Year the vessel was constructed
+	// YearBuilt Year the vessel was constructed
 	//
 	// Example: 2018
 	YearBuilt *int `json:"year_built,omitempty"`
@@ -1474,38 +1474,38 @@ type Vessel struct {
 
 // VesselETA Vessel Estimated Time of Arrival information from AIS static/voyage data
 type VesselETA struct {
-	// Destination Destination Reported destination port or area as entered by the vessel
+	// Destination Reported destination port or area as entered by the vessel
 	//
 	// Example: SINGAPORE
 	Destination *string `json:"destination,omitempty"`
 
-	// DestinationPort DestinationPort Resolved UN/LOCODE of the destination port (empty if unresolved)
+	// DestinationPort Resolved UN/LOCODE of the destination port (empty if unresolved)
 	//
 	// Example: NLRTM
 	DestinationPort *string `json:"destination_port,omitempty"`
 
-	// Draught Draught Current draught (draft) of the vessel in meters
+	// Draught Current draught (draft) of the vessel in meters
 	//
 	// Example: 14.5
 	Draught *float64 `json:"draught,omitempty"`
 
-	// Eta ETA Estimated time of arrival at destination as reported by the vessel
+	// Eta Estimated time of arrival at destination as reported by the vessel
 	Eta *string `json:"eta,omitempty"`
 
-	// Imo IMO International Maritime Organization number - permanent vessel identifier
+	// Imo International Maritime Organization number - permanent vessel identifier
 	//
 	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
-	// Mmsi MMSI Maritime Mobile Service Identity - unique 9-digit vessel identifier
+	// Mmsi Maritime Mobile Service Identity - unique 9-digit vessel identifier
 	//
 	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
-	// Timestamp Timestamp UTC timestamp when this ETA information was received
+	// Timestamp UTC timestamp when this ETA information was received
 	Timestamp *string `json:"timestamp,omitempty"`
 
-	// VesselName VesselName The vessel's registered name as reported in AIS
+	// VesselName The vessel's registered name as reported in AIS
 	//
 	// Example: EVER GIVEN
 	VesselName *string `json:"vessel_name,omitempty"`
@@ -1608,61 +1608,61 @@ type VesselEmissionsResponse struct {
 
 // VesselPosition Vessel position report derived from AIS messages
 type VesselPosition struct {
-	// Cog COG Course Over Ground in degrees (0-359.9), null when unavailable
+	// Cog Course Over Ground in degrees (0-359.9), null when unavailable
 	//
 	// Example: 231.5
 	Cog *float64 `json:"cog,omitempty"`
 
-	// Heading Heading True heading in degrees (0-359), null when unavailable
+	// Heading True heading in degrees (0-359), null when unavailable
 	//
 	// Example: 230
 	Heading *int `json:"heading,omitempty"`
 
-	// Imo IMO International Maritime Organization number - permanent vessel identifier
+	// Imo International Maritime Organization number - permanent vessel identifier
 	//
 	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
-	// Latitude Latitude Geographic latitude in decimal degrees (-90 to 90)
+	// Latitude Geographic latitude in decimal degrees (-90 to 90)
 	//
 	// Example: 1.2644
 	Latitude *float64 `json:"latitude,omitempty"`
 
-	// Location Location GeoJSON point for geospatial queries
+	// Location GeoJSON point for geospatial queries
 	Location *GeoJSON `json:"location,omitempty"`
 
-	// Longitude Longitude Geographic longitude in decimal degrees (-180 to 180)
+	// Longitude Geographic longitude in decimal degrees (-180 to 180)
 	//
 	// Example: 103.8215
 	Longitude *float64 `json:"longitude,omitempty"`
 
-	// Mmsi MMSI Maritime Mobile Service Identity - unique 9-digit vessel identifier
+	// Mmsi Maritime Mobile Service Identity - unique 9-digit vessel identifier
 	//
 	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
-	// NavStatus NavStatus AIS navigational status (0=under way using engine, 1=at anchor, 2=not under command, 3=restricted manoeuvrability, 5=moored, 8=under way sailing, etc.), null when unavailable
+	// NavStatus AIS navigational status (0=under way using engine, 1=at anchor, 2=not under command, 3=restricted manoeuvrability, 5=moored, 8=under way sailing, etc.), null when unavailable
 	//
 	// Example: 0
 	NavStatus *int `json:"nav_status,omitempty"`
 
-	// ProcessedTimestamp ProcessedTimestamp UTC timestamp when the position was processed by the system
+	// ProcessedTimestamp UTC timestamp when the position was processed by the system
 	ProcessedTimestamp *string `json:"processed_timestamp,omitempty"`
 
-	// Sog SOG Speed Over Ground in knots (0-102.2), null when unavailable
+	// Sog Speed Over Ground in knots (0-102.2), null when unavailable
 	//
 	// Example: 14.1
 	Sog *float64 `json:"sog,omitempty"`
 
-	// SuspectedGlitch SuspectedGlitch indicates the position may be unreliable due to a GPS glitch or corrupted AIS transmission (implies impossible vessel speed)
+	// SuspectedGlitch True when the position implies a speed over 500 knots from the vessel's previous clean report, which no vessel reaches. Such a fix is likely a GPS glitch or a corrupted AIS transmission.
 	//
 	// Example: false
 	SuspectedGlitch *bool `json:"suspected_glitch,omitempty"`
 
-	// Timestamp Timestamp UTC timestamp when the AIS message was transmitted by the vessel
+	// Timestamp UTC timestamp when the AIS message was transmitted by the vessel
 	Timestamp *string `json:"timestamp,omitempty"`
 
-	// VesselName VesselName The vessel's registered name as reported in AIS
+	// VesselName The vessel's registered name as reported in AIS
 	//
 	// Example: EVER GIVEN
 	VesselName *string `json:"vessel_name,omitempty"`
@@ -1672,13 +1672,13 @@ type VesselPosition struct {
 type VesselPositionResponse struct {
 	Meta *TypesResolutionMeta `json:"_meta,omitempty"`
 
-	// PositionCheck PositionCheck How the served position compares with the vessel's previous position report.
+	// PositionCheck How the returned position compares with the vessel's previous position report. The lookback_hours field is always present. The identity_match field is present when there is a record to compare against. The other fields need a previous report.
 	PositionCheck *PositionCheck `json:"positionCheck,omitempty"`
 
-	// Vessel Vessel The vessel's particulars, as returned by GET /vessel/{id}. Omitted when the vessel is not in the registry.
+	// Vessel The vessel's particulars, as returned by GET /vessel/{id}. Omitted when the vessel is not in the registry.
 	Vessel *Vessel `json:"vessel,omitempty"`
 
-	// VesselEta VesselETA The latest destination and ETA the vessel reported, as returned by GET /vessel/{id}/eta. Omitted when none is held.
+	// VesselEta The latest destination and ETA the vessel reported, as returned by GET /vessel/{id}/eta. Omitted when no destination or ETA is available, including when the lookup does not finish in time.
 	VesselEta *VesselETA `json:"vesselEta,omitempty"`
 
 	// VesselPosition Vessel position report derived from AIS messages
@@ -1693,17 +1693,17 @@ type VesselPositionsResponse struct {
 
 // VesselReference Vessel identification details for port event reference
 type VesselReference struct {
-	// Imo IMO International Maritime Organization number
+	// Imo International Maritime Organization number
 	//
 	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
-	// Mmsi MMSI Maritime Mobile Service Identity number
+	// Mmsi Maritime Mobile Service Identity number
 	//
 	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
-	// Name Name The vessel's registered name
+	// Name The vessel's registered name
 	//
 	// Example: EVER GIVEN
 	Name *string `json:"name,omitempty"`
@@ -1740,12 +1740,12 @@ type VesselsWithinLocationResponse struct {
 
 // ContractsPortCountry Country information for port location
 type ContractsPortCountry struct {
-	// Code Code ISO 2-letter country code
+	// Code ISO 2-letter country code
 	//
 	// Example: SG
 	Code *string `json:"code,omitempty"`
 
-	// Name Name Full country name
+	// Name Full country name
 	//
 	// Example: Singapore
 	Name *string `json:"name,omitempty"`
@@ -1753,12 +1753,12 @@ type ContractsPortCountry struct {
 
 // ContractsVesselFormerName Historical vessel name record
 type ContractsVesselFormerName struct {
-	// Name Name Previous name of the vessel
+	// Name Previous name of the vessel
 	//
 	// Example: EVER GREEN
 	Name *string `json:"name,omitempty"`
 
-	// YearUntil YearUntil Year until which this name was used
+	// YearUntil Year until which this name was used
 	//
 	// Example: 2018
 	YearUntil *string `json:"year_until,omitempty"`
@@ -1770,10 +1770,10 @@ type TypesResolutionMeta struct {
 	ResolvedId      *int    `json:"resolvedId,omitempty"`
 	ResolvedIdType  *string `json:"resolvedIdType,omitempty"`
 
-	// SuggestedIdType SuggestedIDType, when set, hints that the caller may get a result by
-	// retrying with the opposite identifier type. Emitted only on a total miss
-	// where the counterpart id was neither supplied nor derivable, and phrased
-	// conditionally — it does not assert that the other id exists.
+	// SuggestedIdType When set, the caller may get a result by retrying with the opposite
+	// identifier type. It is set only on a total miss where the counterpart id
+	// was neither supplied nor derivable. It is phrased conditionally and does
+	// not assert that the other id exists.
 	SuggestedIdType *string `json:"suggestedIdType,omitempty"`
 }
 

@@ -11,7 +11,7 @@ package vesselapi
 
 const (
 	// Version is the SDK version string.
-	Version = "4.1.0"
+	Version = "4.1.1"
 
 	// DefaultBaseURL is the default Vessel API base URL.
 	DefaultBaseURL = "https://api.vesselapi.com/v1"
