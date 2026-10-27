@@ -22,7 +22,7 @@ generate:
 # Drop the generator's package comment. go/doc concatenates package comments in
 # filename order, so leaving it here would make it the package overview on
 # pkg.go.dev instead of the one in vesselapi.go.
-	sed -i '/^package vesselapi$/,$!d' generated.go
+	sed -i '/^package vesselapi$$/,$$!d' generated.go
 	sed -i 's|https://api\.deepmap\.com/dev-test|https://api.vesselapi.com/v1|g; s|https://api\.deepmap\.com|https://api.vesselapi.com/v1|g' generated.go
 	gofmt -w generated.go
 

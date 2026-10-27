@@ -3,6 +3,35 @@
 Notable changes in this release. Earlier versions predate this file.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [4.1.0] - 2026-10-26
+
+### Added
+
+- `VesselPositionResponse` has three new fields, which the API returns on every
+  position response since 25 October 2026: `Vessel` (the same object as
+  `Vessels.Get`), `VesselEta` (the same object as `Vessels.ETA`) and
+  `PositionCheck`. `Vessel` and `VesselEta` are nil when the API holds no record
+  for them. Earlier versions drop these keys when decoding.
+- `PositionCheck` compares the position with the vessel's previous report from
+  the last 80 hours. It gives the time and great-circle distance since then, and
+  the speed and course that would cover that distance. It also says whether that
+  speed is more than 1.2 times the vessel's usual top speed, and whether the MMSI
+  and IMO match.
+- `GetVesselIdPositionParams` has `FilterSatLookbackMinutes` and
+  `FilterSatMaxAgeMinutes`, which set the satellite fallback's time windows.
+- `GetVesselIdEtaResponse` and `GetPortUnlocodeInboundResponse` decode a 503 body
+  into `JSON503` (`ServiceUnavailableErrorResponse`).
+
+### Changed
+
+- The bundled OpenAPI spec is synced with the API. Some field descriptions and
+  examples changed with it.
+
+### Fixed
+
+- `make generate` failed at its first `sed` step, so the generator's package
+  comment and placeholder server URLs stayed in `generated.go`.
+
 ## [4.0.1] - 2026-10-08
 
 Documentation only. No function, parameter or type changed.

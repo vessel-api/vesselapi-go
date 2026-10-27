@@ -868,7 +868,7 @@ type PaymentRequiredErrorResponse struct {
 	Error *PaymentRequiredErrorDetail `json:"error,omitempty"`
 }
 
-// Port Complete port information including facilities, services, and characteristics
+// Port Port information including facilities, services, and characteristics where available
 type Port struct {
 	// AnchorageDepth AnchorageDepth Depth at the anchorage area
 	//
@@ -1120,7 +1120,7 @@ type PortReference struct {
 
 // PortResponse Response containing a single port
 type PortResponse struct {
-	// Port Complete port information including facilities, services, and characteristics
+	// Port Port information including facilities, services, and characteristics where available
 	Port *Port `json:"port,omitempty"`
 }
 
@@ -1128,6 +1128,65 @@ type PortResponse struct {
 type PortsWithinLocationResponse struct {
 	NextToken *string `json:"nextToken,omitempty"`
 	Ports     *[]Port `json:"ports,omitempty"`
+}
+
+// PositionCheck defines model for PositionCheck.
+type PositionCheck struct {
+	// DistanceNm DistanceNM Great-circle distance from the previous position, in nautical miles
+	//
+	// Example: 96.3
+	DistanceNm *float64 `json:"distance_nm,omitempty"`
+
+	// ExceedsTypicalSpeed ExceedsTypicalSpeed True when the implied speed is more than 1.2 times the vessel's usual top speed (99th percentile of reported speed) over the last 31 days
+	//
+	// Example: false
+	ExceedsTypicalSpeed *bool `json:"exceeds_typical_speed,omitempty"`
+
+	// IdentityMatch IdentityMatch True when the served position's MMSI and IMO match the vessel's registered identifiers
+	//
+	// Example: true
+	IdentityMatch *bool `json:"identity_match,omitempty"`
+
+	// ImpliedCourse ImpliedCourse Initial great-circle bearing from the previous position, in degrees from true north
+	//
+	// Example: 87
+	ImpliedCourse *int `json:"implied_course,omitempty"`
+
+	// ImpliedSpeedKn ImpliedSpeedKn Average speed needed to cover that distance in that time, in knots
+	//
+	// Example: 14
+	ImpliedSpeedKn *float64 `json:"implied_speed_kn,omitempty"`
+
+	// LookbackHours LookbackHours How far back the previous position was searched for
+	//
+	// Example: 80
+	LookbackHours *int `json:"lookback_hours,omitempty"`
+
+	// MinutesSincePrevious MinutesSincePrevious Minutes between the previous position and the served one
+	//
+	// Example: 412
+	MinutesSincePrevious *int `json:"minutes_since_previous,omitempty"`
+
+	// PreviousPosition PreviousPosition The vessel's newest earlier position report within lookback_hours
+	PreviousPosition *PreviousPosition `json:"previous_position,omitempty"`
+}
+
+// PreviousPosition defines model for PreviousPosition.
+type PreviousPosition struct {
+	// Latitude Latitude of the previous position in decimal degrees
+	//
+	// Example: 1.2644
+	Latitude *float64 `json:"latitude,omitempty"`
+
+	// Longitude Longitude of the previous position in decimal degrees
+	//
+	// Example: 103.8215
+	Longitude *float64 `json:"longitude,omitempty"`
+
+	// Timestamp Timestamp When the previous position was reported (UTC)
+	//
+	// Example: 2026-10-24T03:10:00Z
+	Timestamp *string `json:"timestamp,omitempty"`
 }
 
 // RadioBeacon Navigational radio beacon for maritime direction finding
@@ -1242,7 +1301,30 @@ type RateLimitErrorResponse struct {
 	Error *RateLimitErrorDetail `json:"error,omitempty"`
 }
 
-// Vessel Complete vessel static data including identification, dimensions, and capacities
+// ServiceUnavailableErrorDetail defines model for ServiceUnavailableErrorDetail.
+type ServiceUnavailableErrorDetail struct {
+	// Code Code is a short string identifier for this error for programmatic handling
+	//
+	// Example: service_unavailable
+	Code *ErrorCode `json:"code,omitempty"`
+
+	// Message Message is a human-readable message providing more details about the error
+	//
+	// Example: The service is temporarily unavailable. Retry after a brief delay.
+	Message *string `json:"message,omitempty"`
+
+	// Type Type categorizes the error (always "service_unavailable_error" for 503s)
+	//
+	// Example: service_unavailable_error
+	Type *ErrorType `json:"type,omitempty"`
+}
+
+// ServiceUnavailableErrorResponse defines model for ServiceUnavailableErrorResponse.
+type ServiceUnavailableErrorResponse struct {
+	Error *ServiceUnavailableErrorDetail `json:"error,omitempty"`
+}
+
+// Vessel Vessel static data including identification, dimensions, and capacities where available
 type Vessel struct {
 	// Breadth Breadth Maximum beam (width) of the vessel
 	//
@@ -1301,8 +1383,6 @@ type Vessel struct {
 	EngineType *int `json:"engine_type,omitempty"`
 
 	// Eni ENI European Number of Identification for inland waterway vessels (8 digits)
-	//
-	// Example: 02320524
 	Eni *string `json:"eni,omitempty"`
 
 	// FormerNames FormerNames List of previous names the vessel has operated under
@@ -1320,7 +1400,7 @@ type Vessel struct {
 
 	// Imo IMO International Maritime Organization number - permanent 7-digit vessel identifier
 	//
-	// Example: 9321483
+	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
 	// KilowattPower KilowattPower Main engine power in kilowatts
@@ -1340,7 +1420,7 @@ type Vessel struct {
 
 	// Mmsi MMSI Maritime Mobile Service Identity - 9-digit radio identifier
 	//
-	// Example: 477045900
+	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
 	// Name Name The vessel's current registered name
@@ -1379,13 +1459,11 @@ type Vessel struct {
 	Teu *int `json:"teu,omitempty"`
 
 	// VesselSubtype VesselSubtype Finer-grained classification beyond VesselType (e.g., inland motor cargo or tanker vessel).
-	//
-	// Example: Inland cargo
 	VesselSubtype *string `json:"vessel_subtype,omitempty"`
 
 	// VesselType VesselType Classification of vessel type (e.g., Container Ship, Bulk Carrier)
 	//
-	// Example: Container Ship
+	// Example: Cargo A
 	VesselType *string `json:"vessel_type,omitempty"`
 
 	// YearBuilt YearBuilt Year the vessel was constructed
@@ -1416,12 +1494,12 @@ type VesselETA struct {
 
 	// Imo IMO International Maritime Organization number - permanent vessel identifier
 	//
-	// Example: 9321483
+	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
 	// Mmsi MMSI Maritime Mobile Service Identity - unique 9-digit vessel identifier
 	//
-	// Example: 477045900
+	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
 	// Timestamp Timestamp UTC timestamp when this ETA information was received
@@ -1528,7 +1606,7 @@ type VesselEmissionsResponse struct {
 	NextToken *string              `json:"nextToken,omitempty"`
 }
 
-// VesselPosition Real-time vessel position data derived from AIS messages
+// VesselPosition Vessel position report derived from AIS messages
 type VesselPosition struct {
 	// Cog COG Course Over Ground in degrees (0-359.9), null when unavailable
 	//
@@ -1542,7 +1620,7 @@ type VesselPosition struct {
 
 	// Imo IMO International Maritime Organization number - permanent vessel identifier
 	//
-	// Example: 9321483
+	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
 	// Latitude Latitude Geographic latitude in decimal degrees (-90 to 90)
@@ -1560,7 +1638,7 @@ type VesselPosition struct {
 
 	// Mmsi MMSI Maritime Mobile Service Identity - unique 9-digit vessel identifier
 	//
-	// Example: 477045900
+	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
 	// NavStatus NavStatus AIS navigational status (0=under way using engine, 1=at anchor, 2=not under command, 3=restricted manoeuvrability, 5=moored, 8=under way sailing, etc.), null when unavailable
@@ -1594,7 +1672,16 @@ type VesselPosition struct {
 type VesselPositionResponse struct {
 	Meta *TypesResolutionMeta `json:"_meta,omitempty"`
 
-	// VesselPosition Real-time vessel position data derived from AIS messages
+	// PositionCheck PositionCheck How the served position compares with the vessel's previous position report.
+	PositionCheck *PositionCheck `json:"positionCheck,omitempty"`
+
+	// Vessel Vessel The vessel's particulars, as returned by GET /vessel/{id}. Omitted when the vessel is not in the registry.
+	Vessel *Vessel `json:"vessel,omitempty"`
+
+	// VesselEta VesselETA The latest destination and ETA the vessel reported, as returned by GET /vessel/{id}/eta. Omitted when none is held.
+	VesselEta *VesselETA `json:"vesselEta,omitempty"`
+
+	// VesselPosition Vessel position report derived from AIS messages
 	VesselPosition *VesselPosition `json:"vesselPosition,omitempty"`
 }
 
@@ -1608,12 +1695,12 @@ type VesselPositionsResponse struct {
 type VesselReference struct {
 	// Imo IMO International Maritime Organization number
 	//
-	// Example: 9321483
+	// Example: 9811000
 	Imo *int `json:"imo,omitempty"`
 
 	// Mmsi MMSI Maritime Mobile Service Identity number
 	//
-	// Example: 477045900
+	// Example: 353136000
 	Mmsi *int `json:"mmsi,omitempty"`
 
 	// Name Name The vessel's registered name
@@ -1626,7 +1713,7 @@ type VesselReference struct {
 type VesselResponse struct {
 	Meta *TypesResolutionMeta `json:"_meta,omitempty"`
 
-	// Vessel Complete vessel static data including identification, dimensions, and capacities
+	// Vessel Vessel static data including identification, dimensions, and capacities where available
 	Vessel *Vessel `json:"vessel,omitempty"`
 }
 
@@ -2270,6 +2357,12 @@ type GetVesselIdPositionParams struct {
 
 	// FilterSat Enable satellite AIS fallback (default: false)
 	FilterSat *bool `form:"filter.sat,omitempty" json:"filter.sat,omitempty"`
+
+	// FilterSatLookbackMinutes With filter.sat=true: how old a satellite-lookup fix may be and still be returned, 60-4800 minutes (default: 180)
+	FilterSatLookbackMinutes *int `form:"filter.satLookbackMinutes,omitempty" json:"filter.satLookbackMinutes,omitempty"`
+
+	// FilterSatMaxAgeMinutes With filter.sat=true: how old a stored position may be before a satellite lookup is made, 15-4800 minutes (default: 60). Paid plans only
+	FilterSatMaxAgeMinutes *int `form:"filter.satMaxAgeMinutes,omitempty" json:"filter.satMaxAgeMinutes,omitempty"`
 }
 
 // GetVesselIdPositionParamsFilterIdType defines parameters for GetVesselIdPosition.
@@ -2590,7 +2683,7 @@ type ClientInterface interface {
 
 	// GetVesselIdPosition Get last known vessel position
 	//
-	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
+	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 	//
 	// Corresponds with GET /vessel/{id}/position (the `GetVesselIdPosition` operationId).
 	GetVesselIdPosition(ctx context.Context, id string, params *GetVesselIdPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3130,7 +3223,7 @@ func (c *Client) GetVesselIdEta(ctx context.Context, id string, params *GetVesse
 
 // GetVesselIdPosition Get last known vessel position
 //
-// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
+// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 //
 // Corresponds with GET /vessel/{id}/position (the `GetVesselIdPosition` operationId).
 func (c *Client) GetVesselIdPosition(ctx context.Context, id string, params *GetVesselIdPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6163,6 +6256,30 @@ func NewGetVesselIdPositionRequest(server string, id string, params *GetVesselId
 
 		}
 
+		if params.FilterSatLookbackMinutes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "filter.satLookbackMinutes", *params.FilterSatLookbackMinutes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.FilterSatMaxAgeMinutes != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "filter.satMaxAgeMinutes", *params.FilterSatMaxAgeMinutes, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -6606,7 +6723,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetVesselIdPositionWithResponse Get last known vessel position
 	//
-	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
+	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -7711,6 +7828,8 @@ type GetPortUnlocodeInboundResponse struct {
 	JSON429 *RateLimitErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ServiceUnavailableErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -7746,6 +7865,11 @@ func (r GetPortUnlocodeInboundResponse) GetJSON429() *RateLimitErrorResponse {
 // GetJSON500 returns the response for an HTTP 500 `application/json` response
 func (r GetPortUnlocodeInboundResponse) GetJSON500() *InternalServerErrorResponse {
 	return r.JSON500
+}
+
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetPortUnlocodeInboundResponse) GetJSON503() *ServiceUnavailableErrorResponse {
+	return r.JSON503
 }
 
 // GetBody returns the raw response body bytes
@@ -8976,6 +9100,8 @@ type GetVesselIdEtaResponse struct {
 	JSON429 *RateLimitErrorResponse
 	// JSON500 the response for an HTTP 500 `application/json` response
 	JSON500 *InternalServerErrorResponse
+	// JSON503 the response for an HTTP 503 `application/json` response
+	JSON503 *ServiceUnavailableErrorResponse
 }
 
 // GetJSON200 returns the response for an HTTP 200 `application/json` response
@@ -9013,6 +9139,11 @@ func (r GetVesselIdEtaResponse) GetJSON500() *InternalServerErrorResponse {
 	return r.JSON500
 }
 
+// GetJSON503 returns the response for an HTTP 503 `application/json` response
+func (r GetVesselIdEtaResponse) GetJSON503() *ServiceUnavailableErrorResponse {
+	return r.JSON503
+}
+
 // GetBody returns the raw response body bytes
 func (r GetVesselIdEtaResponse) GetBody() []byte {
 	return r.Body
@@ -9047,6 +9178,8 @@ type GetVesselIdPositionResponse200Headers struct {
 	XDataSource                *string
 	XSatelliteCreditCharged    *string
 	XSatelliteCreditsRemaining *string
+	XSatelliteLookbackMinutes  *string
+	XSatelliteMaxAgeMinutes    *string
 	XSatelliteStatus           *string
 }
 
@@ -9683,7 +9816,7 @@ func (c *ClientWithResponses) GetVesselIdEtaWithResponse(ctx context.Context, id
 
 // GetVesselIdPositionWithResponse Get last known vessel position
 //
-// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale; this requires satellite credits.
+// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -10634,6 +10767,13 @@ func ParseGetPortUnlocodeInboundResponse(rsp *http.Response) (*GetPortUnlocodeIn
 			return nil, err
 		}
 		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailableErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
 
 	}
 
@@ -11660,6 +11800,13 @@ func ParseGetVesselIdEtaResponse(rsp *http.Response) (*GetVesselIdEtaResponse, e
 		}
 		response.JSON500 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailableErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON503 = &dest
+
 	}
 
 	return response, nil
@@ -11760,6 +11907,20 @@ func ParseGetVesselIdPositionResponse(rsp *http.Response) (*GetVesselIdPositionR
 				return nil, err
 			}
 			headers.XSatelliteCreditsRemaining = &value
+		}
+		if values := rsp.Header.Values("X-Satellite-Lookback-Minutes"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Satellite-Lookback-Minutes", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XSatelliteLookbackMinutes = &value
+		}
+		if values := rsp.Header.Values("X-Satellite-Max-Age-Minutes"); len(values) > 0 {
+			var value string
+			if err := runtime.BindStyledParameterWithOptions("simple", "X-Satellite-Max-Age-Minutes", values[0], &value, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			}
+			headers.XSatelliteMaxAgeMinutes = &value
 		}
 		if values := rsp.Header.Values("X-Satellite-Status"); len(values) > 0 {
 			var value string
