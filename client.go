@@ -427,8 +427,12 @@ func (e *APIError) IsAuthError() bool { return e.StatusCode == 401 }
 
 // IsPaymentRequired returns true if the error is a 402 Payment Required
 // response, returned when a satellite position is requested with no satellite
-// credits left and no stored position to fall back on. Top up credits, or retry
-// without the satellite fallback.
+// credits left and no stored position to fall back on. Retry without the
+// satellite fallback.
+//
+// The satellite fallback is deprecated: it is withdrawn in its current form,
+// credit packs are no longer on sale, and from the cutoff date filter.sat is
+// accepted and ignored, so no satellite request returns 402 after that date.
 func (e *APIError) IsPaymentRequired() bool { return e.StatusCode == 402 }
 
 // IsForbidden returns true if the error is a 403 Forbidden response, returned

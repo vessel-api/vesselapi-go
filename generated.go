@@ -2355,13 +2355,16 @@ type GetVesselIdPositionParams struct {
 	// FilterIdType Identifier type: 'mmsi' or 'imo'
 	FilterIdType GetVesselIdPositionParamsFilterIdType `form:"filter.idType" json:"filter.idType"`
 
-	// FilterSat Enable satellite AIS fallback (default: false)
+	// FilterSat Deprecated: the satellite fallback is withdrawn in its current form. Until the cutoff date (see the Sunset header) it enables the satellite AIS fallback for existing credit holders; from that date it is accepted and ignored and no credit is charged (default: false)
+	// Deprecated: The satellite fallback is withdrawn in its current form. Accepted and ignored from the cutoff date in the Sunset header.
 	FilterSat *bool `form:"filter.sat,omitempty" json:"filter.sat,omitempty"`
 
-	// FilterSatLookbackMinutes With filter.sat=true: how old a satellite-lookup fix may be and still be returned, 60-4800 minutes (default: 180)
+	// FilterSatLookbackMinutes Deprecated: the satellite fallback is withdrawn in its current form. Ignored from the cutoff date. With filter.sat=true: how old a satellite-lookup fix may be and still be returned, 60-4800 minutes (default: 180)
+	// Deprecated: The satellite fallback is withdrawn in its current form. Accepted and ignored from the cutoff date in the Sunset header.
 	FilterSatLookbackMinutes *int `form:"filter.satLookbackMinutes,omitempty" json:"filter.satLookbackMinutes,omitempty"`
 
-	// FilterSatMaxAgeMinutes With filter.sat=true: how old a stored position may be before a satellite lookup is made, 15-4800 minutes (default: 60). Paid plans only
+	// FilterSatMaxAgeMinutes Deprecated: the satellite fallback is withdrawn in its current form. Ignored from the cutoff date. With filter.sat=true: how old a stored position may be before a satellite lookup is made, 15-4800 minutes (default: 60). Paid plans only
+	// Deprecated: The satellite fallback is withdrawn in its current form. Accepted and ignored from the cutoff date in the Sunset header.
 	FilterSatMaxAgeMinutes *int `form:"filter.satMaxAgeMinutes,omitempty" json:"filter.satMaxAgeMinutes,omitempty"`
 }
 
@@ -2683,7 +2686,7 @@ type ClientInterface interface {
 
 	// GetVesselIdPosition Get last known vessel position
 	//
-	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
+	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. The filter.sat satellite fallback is deprecated and withdrawn in its current form: it works for existing credit holders until the cutoff date, after which it is accepted and ignored. The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 	//
 	// Corresponds with GET /vessel/{id}/position (the `GetVesselIdPosition` operationId).
 	GetVesselIdPosition(ctx context.Context, id string, params *GetVesselIdPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3223,7 +3226,7 @@ func (c *Client) GetVesselIdEta(ctx context.Context, id string, params *GetVesse
 
 // GetVesselIdPosition Get last known vessel position
 //
-// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
+// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. The filter.sat satellite fallback is deprecated and withdrawn in its current form: it works for existing credit holders until the cutoff date, after which it is accepted and ignored. The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 //
 // Corresponds with GET /vessel/{id}/position (the `GetVesselIdPosition` operationId).
 func (c *Client) GetVesselIdPosition(ctx context.Context, id string, params *GetVesselIdPositionParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -6723,7 +6726,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetVesselIdPositionWithResponse Get last known vessel position
 	//
-	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
+	// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. The filter.sat satellite fallback is deprecated and withdrawn in its current form: it works for existing credit holders until the cutoff date, after which it is accepted and ignored. The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -9816,7 +9819,7 @@ func (c *ClientWithResponses) GetVesselIdEtaWithResponse(ctx context.Context, id
 
 // GetVesselIdPositionWithResponse Get last known vessel position
 //
-// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. Use filter.sat=true to enable satellite AIS fallback when terrestrial data is stale (requires satellite credits). The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
+// Retrieves the most recent AIS position report for a vessel, including coordinates, vessel identifiers, and timestamps. The filter.sat satellite fallback is deprecated and withdrawn in its current form: it works for existing credit holders until the cutoff date, after which it is accepted and ignored. The response also includes the vessel's particulars (vessel), the latest destination and ETA it reported (vesselEta), and positionCheck, which compares the position with the vessel's previous position report: time and distance since then, implied speed and course, and whether the identifiers match.
 //
 // Returns a wrapper object for the known response body format(s).
 //

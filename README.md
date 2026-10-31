@@ -170,7 +170,7 @@ if errors.As(err, &apiErr) {
 		// Check API key
 	}
 	if apiErr.IsPaymentRequired() {
-		// Out of satellite credits
+		// Out of satellite credits (deprecated satellite fallback)
 	}
 	if apiErr.IsForbidden() {
 		// Key suspended, or feature not on your plan
@@ -182,10 +182,12 @@ if errors.As(err, &apiErr) {
 | Status | Helper | Meaning |
 |--------|--------|---------|
 | 401 | `IsAuthError()` | API key missing, invalid or revoked |
-| 402 | `IsPaymentRequired()` | Out of satellite credits, with no stored position to fall back on |
+| 402 | `IsPaymentRequired()` | Out of satellite credits, with no stored position to fall back on (deprecated satellite fallback) |
 | 403 | `IsForbidden()` | Key suspended for sustained quota abuse, or feature not on your plan |
 | 404 | `IsNotFound()` | Resource does not exist |
 | 429 | `IsRateLimited()` | Rate or quota limit hit (retried automatically) |
+
+> **Deprecated.** The satellite fallback is withdrawn in its current form. Requests with `filter.sat=true` keep working for existing credit holders until the cutoff date and carry Deprecation and Sunset headers. From the cutoff date the parameter is accepted and ignored, the response carries a Warning header, and no credit is charged. Credit packs are no longer on sale; unspent credits are refunded on request to support@vesselapi.com. The cutoff date is given in the `Sunset` header.
 
 `APIError` also carries the API's machine-readable `Code` and `Type` fields.
 Branch on `Code` rather than on `Message`, which is free-form text and may be
@@ -200,7 +202,7 @@ var apiErr *vesselapi.APIError
 if errors.As(err, &apiErr) {
 	switch {
 	case apiErr.Code == vesselapi.ErrorCodeInsufficientCredits:
-		// 402: top up credits, or retry without the satellite fallback.
+		// 402: retry without the deprecated satellite fallback.
 		pos, err := client.Vessels.Position(ctx, "9811000", nil)
 		_, _ = pos, err
 	case apiErr.Code == vesselapi.ErrorCodeFeatureNotAvailable:
